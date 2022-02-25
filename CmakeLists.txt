@@ -1,0 +1,54 @@
+cmake_minimum_required(VERSION 3.20.0)
+
+# vcpkg <--
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "")
+endif()
+if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}" CACHE STRING "")
+endif()
+
+# 解析正则路径
+function( parse_regex_path return_set regex_path)
+    set(regex_path ${regex_path} ${ARGN})
+    file(GLOB SourceFiles ${regex_path})
+    set(${return_set} )
+    foreach(whom ${SourceFiles})
+        STRING(REGEX REPLACE ".+/(.+)\\..*" "\\1" FILE_NAME  ${whom})
+        set(${return_set} ${${return_set}} ${whom})
+    endforeach()
+    set(${return_set} ${${return_set}} CACHE STRING "nothing" )
+    message("return_set:${${return_set}}")
+    message("regex_path:${regex_path}")
+    
+endfunction()
+
+
+Project(GDFileStore)
+set(lib_dirs GDFileStore.cpp)
+add_library(GDFileStore ${lib_dirs})
+include_directories( ./test . )
+option(test_on "will build tests" ON)
+
+# import gtest
+find_package(GTest CONFIG REQUIRED)
+
+if(test_on)
+    parse_regex_path(tests_path "./test/*.cpp")
+    message("tests:${tests_path}")
+    foreach(test ${tests_path})
+        STRING(REGEX REPLACE ".+/(.+)\\..*" "\\1" TestName  ${test})
+        # 跳过test_main
+        if(${TestName} MATCHES "test_main")
+            continue()
+        endif()
+        add_executable(${TestName} ${test} "./test/test_main.cpp")
+        target_link_libraries(${TestName} PRIVATE GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main)
+    endforeach()
+    #  汇总测试  若测试数大于0可生成汇总测试
+    list(LENGTH tests_path tests_count)
+    if(tests_count GREATER 0)
+        add_executable(all_tests ${tests_path} "./test/test_main.cpp")
+    endif()
+endif()
