@@ -9,8 +9,7 @@
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
-      "ctestCommandArgs": "",
-      "remoteCopyAdditionalIncludeDirectories": [ "${VCPKG_ROOT}/installed/x64-windows/include" ]
+      "ctestCommandArgs": ""
     }
   ]
 }

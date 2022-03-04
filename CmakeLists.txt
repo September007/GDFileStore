@@ -31,10 +31,10 @@ endfunction()
 
 Project(GDFileStore)
 set(lib_dirs GDFileStore.cpp)
-add_library(GDFileStore ${lib_dirs} "test/test_main (2).cpp")
+add_library(GDFileStore ${lib_dirs} "test/test_main.cpp")
 # 
 add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
-include_directories( ./test . ./deps)
+include_directories( ./test . ./deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
 option(test_on "will build tests" ON)
 
 # import gtest
@@ -49,12 +49,12 @@ if(test_on)
         if(${TestName} MATCHES "test_main")
             continue()
         endif()
-        add_executable(${TestName} ${test} "./test/test_main.cpp" "test/test_main (2).cpp")
+        add_executable(${TestName} ${test} "./test/test_main.cpp" "test/test_main.cpp")
         target_link_libraries(${TestName} PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main)
     endforeach()
     # 
     list(LENGTH tests_path tests_count)
     if(tests_count GREATER 1)# with test_main
-        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main (2).cpp")
+        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp")
     endif()
 endif()
