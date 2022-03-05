@@ -20,29 +20,12 @@ SpreadCall(ChildTask ct, CollectRets cr, vector<SpreadNode> vs,RestParams&&... r
 	auto ret = cr(retparam);
 	return ret;
 }
-//template<typename SpreadNode, typename ChildTask, typename CollectRet>
-//	requires invocable<ChildTask, SpreadNode>&& invocable< CollectRet, vector<invoke_result_t<ChildTask, SpreadNode>>&&>
-//invoke_result_t<CollectRet, vector<invoke_result_t<ChildTask, SpreadNode>>&&>
-//SpreadCall(ChildTask ct, CollectRet cr, vector<SpreadNode> vs) {
-//	using ChildTaskCallResultType = invoke_result_t<ChildTask, SpreadNode>;
-//	vector<ChildTaskCallResultType> retparam;
-//	for (auto& node : vs)
-//		retparam.push_back(ct(node));
-//	auto ret = cr(retparam);
-//	return ret;
-//}
-//template<typename SpreadNode, invocable ChildTask, invocable CollectRet, typename ...RestParam>
-//invoke_result_t<CollectRet, vector<invoke_result_t<ChildTask, SpreadNode, RestParam...>>&&>
-//SpreadCall(ChildTask ct, CollectRet cr, vector<SpreadNode> vs, RestParam&&...  rp) {
-//	using ChildTaskCallResultType = invoke_result_t<ChildTask, SpreadNode, RestParam...>;
-//	vector<ChildTaskCallResultType> retparam;
-//	for (auto& node : vs)
-//		retparam.push_back(ct(node, std::forward<RestParam&&>(rp)...));
-//	auto ret = cr(retparam);
-//	return ret;
-//}
-//template<typename SpreadNode,typename ChildTask,typename CollectRet ,typename ...RestParam>
-//decltype(declval<CollectRet>()(const vector<declval<ChildTask>()(SpreadNode,RestParam...&&)>() )>())
-//SpreadCall(const vector<SpreadNode>& vs, RestParam... && rp) {
-//	
-//}
+
+template<typename SpreadNode, typename ChildTask,typename ...RestParams>
+	requires invocable<ChildTask, SpreadNode,RestParams...>
+vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>
+SpreadCall(ChildTask ct, vector<SpreadNode> vs,RestParams&&... restParams) {
+	return SpreadCall(ct,
+	[](vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>> rets){return rets;},
+		vs,	forward<RestParams>(restParams)...);
+}
