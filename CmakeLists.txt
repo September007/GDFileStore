@@ -38,9 +38,10 @@ add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
 include_directories( ./test . ./deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
 option(test_on "will build tests" ON)
 
-# import gtest
+# import gtest for test
 find_package(GTest CONFIG REQUIRED)
-
+find_package(Boost REQUIRED  )
+find_package(spdlog CONFIG REQUIRED)
 if(test_on)
     parse_regex_path(tests_path "./test/*.cpp")
    # message("tests:${tests_path}")
@@ -51,11 +52,16 @@ if(test_on)
             continue()
         endif()
         add_executable(${TestName} ${test} "./test/test_main.cpp" "test/test_main.cpp")
-        target_link_libraries(${TestName} PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main)
+        target_link_libraries(${TestName} 
+            PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main
+            PRIVATE spdlog::spdlog spdlog::spdlog_header_only)
     endforeach()
     # 
     list(LENGTH tests_path tests_count)
     if(tests_count GREATER 1)# with test_main
         add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp")
+        target_link_libraries(all_tests 
+            PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main
+            PRIVATE spdlog::spdlog spdlog::spdlog_header_only)
     endif()
 endif()

@@ -1,3 +1,7 @@
+#pragma once
+#ifndef TEMPLATE_UTILITY_HEAD
+#define TEMPLATE_UTILITY_HEAD
+
 #include<type_traits>
 #include<concepts>
 #include<vector>
@@ -29,3 +33,5 @@ SpreadCall(ChildTask ct, vector<SpreadNode> vs,RestParams&&... restParams) {
 	[](vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>> rets){return rets;},
 		vs,	forward<RestParams>(restParams)...);
 }
+
+#endif //TEMPLATE_UTILITY_HEAD

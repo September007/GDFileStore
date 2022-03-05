@@ -13,5 +13,5 @@
 #include<template_utility.h>
 #include<string>
 #include<string_view>
-
+#include<spdlog/spdlog.h>
 #endif //head file guard

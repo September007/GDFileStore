@@ -12,8 +12,8 @@ using namespace std;
 TEST(file,stat) {
 	;
 	auto test = [](std::string path) {
-		struct stat *st=new struct stat;
-		stat(path.c_str(),st);
+		struct _stat *st=new struct _stat;
+		_stat(path.c_str(),st);
 		return st;
 	};
 	auto f = test(R"(E:\GAMES\HTPlatform\HTPlatformBeta\Config.ini)");
