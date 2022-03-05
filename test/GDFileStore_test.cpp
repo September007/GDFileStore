@@ -20,7 +20,7 @@ struct GDFSTest {
 			while (--len > 0) {
 				content.append(1, char(rando() % 60 + '0'));
 			}
-			contents.push_back(move(content));
+			contents.push_back(std::move(content));
 		}
 		for (int i = 0; i < TC; ++i) {
 			auto ret = g._StoreObjectData(Object{ names[i] }, contents[i]);
@@ -28,6 +28,8 @@ struct GDFSTest {
 		}
 		for (int i = 0; i < TC; ++i) {
 			auto readContent = g._get_object_data(Object{ names[i] });
+			auto con=contents[i];
+			auto len0=readContent.length(),len1=con.length();
 			EXPECT_EQ(readContent, contents[i]);
 		}
 		std::filesystem::remove_all(path);

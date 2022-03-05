@@ -6,7 +6,7 @@
 #include<spdlog/spdlog.h>
 //@Todo: journal
 
-//ÅÐ¶ÏÊÇ·ñÊÇÄ¬ÈÏÖµ,ÓÚPageGroupÓëObject¶øÑÔ£¬Ä¬ÈÏÖµÒâÎ¶×Å²»ÊÇÕý³£¶ÔÏó
+//ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½Öµ,ï¿½ï¿½PageGroupï¿½ï¿½Objectï¿½ï¿½ï¿½Ô£ï¿½Ä¬ï¿½ï¿½Öµï¿½ï¿½Î¶ï¿½Å²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 template<typename T>
 	requires is_default_constructible_v<decay_t<T>>
 inline bool is_default(T &&t) { return t == decay_t<T>(); };
@@ -68,12 +68,10 @@ private: //public for now for test
 		return (boost::format("%1%/%2%") % this->path % pg.name).str();
 	}
 	bool _IsDirectoryExists(const char* path) {
-		struct _stat buffer;
-		return ::_stat(path, &buffer) == 0&&(buffer.st_mode&_S_IFDIR);
+		return filesystem::is_directory(path);
 	}
 	bool _IsFileExists(const char* path) {
-		struct _stat buffer;
-		return ::_stat(path, &buffer) == 0&&(buffer.st_mode&_S_IFREG);
+		return filesystem::is_regular_file(path);
 	}
 	bool _IsObjectExists(Object obj) {
 		return _IsFileExists(obj.name.c_str());
@@ -89,8 +87,9 @@ private: //public for now for test
 		in.seekg(ios_base::beg);
 		string ret;
 		//the last char on file[length-1] is '\0'
-		ret.resize(length-1);
-		in.read(const_cast<char*>(ret.c_str()), length-1);
+		ret.resize(length);
+		in.read(const_cast<char*>(ret.c_str()), length);
+		if (ret.back() == '\0')ret.pop_back();
 		return ret;
 	}
 	//return true if success

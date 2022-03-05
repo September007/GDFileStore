@@ -8,13 +8,12 @@
 #include<concepts>
 #include<iostream>
 #include<stdio.h>
+#include<filesystem>
 using namespace std;
 TEST(file,stat) {
 	;
 	auto test = [](std::string path) {
-		struct _stat *st=new struct _stat;
-		_stat(path.c_str(),st);
-		return st;
+		return filesystem::status(path);
 	};
 	auto f = test(R"(E:\GAMES\HTPlatform\HTPlatformBeta\Config.ini)");
 	auto l = test(R"(D:\lkc.lnk)");
