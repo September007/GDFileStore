@@ -2,5 +2,5 @@
 #include<iostream>
 int main() {
 	::testing::InitGoogleTest();
-	RUN_ALL_TESTS();
+	auto ret=RUN_ALL_TESTS();
 }

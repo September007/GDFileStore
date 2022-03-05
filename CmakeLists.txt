@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 # Enable C++20
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
+# Set C++20 directories
+#add_compile_options(-isystem /usr/include/c++/9)
 # vcpkg <--
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"

@@ -3,7 +3,9 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<string>
-#include<format>
+//abonedoned because gcc doesn't support
+//#include<format>
+#include<concepts>
 #include<iostream>
 #include<stdio.h>
 using namespace std;
