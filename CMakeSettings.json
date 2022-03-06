@@ -1,16 +1,41 @@
 ﻿{
   "configurations": [
     {
-      "name": "x64-Debug",
+      "name": "x64-Windows-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\build",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildRoot": "${projectDir}\\build_Windows",
+      "installRoot": "${projectDir}\\out\\install_Windows\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "intelliSenseMode": "windows-clang-x64"
+    },
+    {
+      "name": "x64-Linux-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\build_Linux",
+      "installRoot": "${projectDir}\\out\\install_Linux\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "intelliSenseMode": "linux-gcc-x64"
+    },
+    {
+      "name": "WSL-GCC-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\build_WSL\\${name}",
+      "installRoot": "${projectDir}\\install_WSL\\${name}",
+      "cmakeExecutable": "cmake",
+      "cmakeCommandArgs": "-DVCPKG_TARGET_TRIPLET=x64-linux ",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "linux_x64" ],
+      "wslPath": "${defaultWSLPath}"
     }
   ]
 }
