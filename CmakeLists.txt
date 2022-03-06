@@ -23,24 +23,25 @@ function( parse_regex_path return_set regex_path)
         set(${return_set} ${${return_set}} ${whom})
     endforeach()
     set(${return_set} ${${return_set}} CACHE STRING "seems like only cache varible can stay alive out of function scope" )
-   # message("return_set:${${return_set}}")
-   # message("regex_path:${regex_path}")
-    
 endfunction()
  
+
 option(test_on "will build tests" ON)
 
 Project(GDFileStore)
-set(lib_dirs GDFileStore.cpp)
-add_library(GDFileStore ${lib_dirs} "test/test_main.cpp")
+parse_regex_path(lib_sources "./GD*.cpp")
+add_library(GDFileStore ${lib_sources})
 # these definitions is for future
 add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
 include_directories( ./test . ./deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
-
 # import gtest for test
 find_package(GTest CONFIG REQUIRED)
 find_package(Boost REQUIRED  )
-find_package(spdlog CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED) 
+find_package(RocksDB CONFIG REQUIRED)
+set (dependencis 
+            PUBLIC  GTest::gtest 
+            PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb)
 if(test_on)
 #
     add_compile_definitions(TEST_ON)
@@ -52,17 +53,13 @@ if(test_on)
         if(${TestName} MATCHES "test_main")
             continue()
         endif()
-        add_executable(${TestName} ${test} "./test/test_main.cpp" "test/test_main.cpp")
-        target_link_libraries(${TestName} 
-            PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main
-            PRIVATE spdlog::spdlog spdlog::spdlog_header_only)
+        add_executable(${TestName} ${test} "./test/test_main.cpp" ${lib_sources})
+        target_link_libraries(${TestName} ${dependencis})
     endforeach()
     # 
     list(LENGTH tests_path tests_count)
     if(tests_count GREATER 1)# with test_main
-        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp")
-        target_link_libraries(all_tests 
-            PUBLIC GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main
-            PRIVATE spdlog::spdlog spdlog::spdlog_header_only)
+        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp" ${lib_sources})
+        target_link_libraries(all_tests ${dependencis})
     endif()
 endif()

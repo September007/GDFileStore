@@ -8,12 +8,12 @@ TEST(file,read){
 		size_t length = in.tellg();
 		in.seekg(ios_base::beg);
 		string ret;
-		//the last char on file[length-1] is '\0'
+		//the last char on file[length-1] is '\0'  on windows
 		ret.resize(length);
 		in.read(const_cast<char*>(ret.c_str()), length);
 		return ret;
     };
-    system("echo %cd% ");
-    //on linux 3904
-    cout<<readFile("../GDFileStore.h").length()<<endl;
+    //system("echo %cd% ");
+    ////on linux 3904
+    //cout<<readFile("../GDFileStore.h").length()<<endl;
 }
