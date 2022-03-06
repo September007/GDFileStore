@@ -6,7 +6,7 @@
 #include<spdlog/spdlog.h>
 //@Todo: journal
 
-//�ж��Ƿ���Ĭ��ֵ,��PageGroup��Object���ԣ�Ĭ��ֵ��ζ�Ų�����������
+//for PageGroup and Object,the default value of them  means those are meaningless or illegal
 template<typename T>
 	requires is_default_constructible_v<decay_t<T>>
 inline bool is_default(T &&t) { return t == decay_t<T>(); };
@@ -33,6 +33,10 @@ class KVStore {
 
 };
 class GDFileStore {
+#ifdef TEST_ON
+	//this is test class,which need access
+	friend struct GDFSTest;
+#endif
 //types define
 public:
 	using KVStore_type = KVStore;
@@ -56,9 +60,8 @@ public:
 	auto get_KVStore() { return &kv; }
 	auto get_path() { return path; }
 
-private: //public for now for test
+private: 
 	//internal interface for object data
-	friend struct GDFSTest;
 	//file suffix is .txt
 	string _GetObjectStoragePath(Object obj) {
 		auto pg = _GetPageGroup(obj);
@@ -80,36 +83,10 @@ private: //public for now for test
 		return std::filesystem::create_directories(path);
 	}
 	//call this after confirm object exists
-	file_object_data_type _get_object_data(Object obj) {
-		fstream in(_GetObjectStoragePath(obj));
-		in.seekg(0, ios_base::end);
-		size_t length = in.tellg();
-		in.seekg(ios_base::beg);
-		string ret;
-		//the last char on file[length-1] is '\0'
-		ret.resize(length);
-		in.read(const_cast<char*>(ret.c_str()), length);
-		if (ret.back() == '\0')ret.pop_back();
-		return ret;
-	}
+	file_object_data_type _get_object_data(Object obj);
 	//return true if success
 	//@Todo: save file in binary if content contains illegal char
-	bool _StoreObjectData(Object obj, file_object_data_type data) {
-		auto objDir = _GetObjectStoragePath(obj);
-		ofstream out(objDir);
-		if (!out.good()) {
-			auto pg = _GetPageGroup(obj);
-			auto pgDir = _GetPageGroupStoragePath(pg);
-			//maybe missing pg directory
-			if (!_IsDirectoryExists(pgDir.c_str()) && _CreateDir(pgDir.c_str()))
-				out.open(objDir);
-			else
-				return false;
-		}
-		out << data << flush;
-		out.close();
-		return out.good();
-	}
+	bool _StoreObjectData(Object obj, file_object_data_type data);
 	//@Todo: transaction
 	//@Todo: ops
 	//@Todo: mount unmount
@@ -121,7 +98,6 @@ public:
 	PageGroup _GetPageGroup(const Object obj) {
 		constexpr int PG_count_limit = 10;
 		if (is_default(obj))return PageGroup();
-		
 		return PageGroup(to_string(std::hash<string>()(obj.name)%PG_count_limit));
 	}
 };

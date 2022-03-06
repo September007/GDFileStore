@@ -28,20 +28,22 @@ function( parse_regex_path return_set regex_path)
     
 endfunction()
  
+option(test_on "will build tests" ON)
 
 Project(GDFileStore)
 set(lib_dirs GDFileStore.cpp)
 add_library(GDFileStore ${lib_dirs} "test/test_main.cpp")
-# 
+# these definitions is for future
 add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
 include_directories( ./test . ./deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
-option(test_on "will build tests" ON)
 
 # import gtest for test
 find_package(GTest CONFIG REQUIRED)
 find_package(Boost REQUIRED  )
 find_package(spdlog CONFIG REQUIRED)
 if(test_on)
+#
+    add_compile_definitions(TEST_ON)
     parse_regex_path(tests_path "./test/*.cpp")
    # message("tests:${tests_path}")
     foreach(test ${tests_path})
