@@ -102,13 +102,13 @@ public:
 	using UnitType = uint8_t;
 	// using Container = vector<UnitType>;
 	// data length
-	int length;
+	int length = 0;
 	// offset for read
 	int offset = 0;
 	//buffer length
-	int buffer_length;
+	int buffer_length = 0;
 	//data
-	UnitType* data;
+	UnitType* data = nullptr;
 	//
 	static constexpr double incre_factor = 1.5;
 	bool _expand_prepare(int addtionalLength) {
@@ -118,6 +118,8 @@ public:
 			auto new_data = new UnitType[newBufferLength];
 			memcpy(new_data, data, length);
 			buffer_length = newBufferLength;
+			delete data;
+			data = new_data;
 		}
 		catch (...) {
 			//buffer::static_logger()->warn("{}:{},{} allocate buffer failed", getTimeStr(), __FILE__, __LINE__);
@@ -126,7 +128,9 @@ public:
 
 		return true;
 	}
-	~buffer() { delete[]data; }
+	~buffer() {
+		delete data;
+	}
 };
 
 //different from WriteArray,this requre T is pod type
@@ -138,16 +142,17 @@ void WriteSequence(buffer& buf, T* t, int len) {
 }
 
 template<typename T = int>
-void Write(buffer& buf, T t) {
+void Write(buffer& buf, T* t) {
 	constexpr auto TLENGTH = sizeof(T);
 	if constexpr (is_arithmetic_v<T>) {
 		buf._expand_prepare(TLENGTH);
-		memcpy(buf.data + buf.length, reinterpret_cast<void*>(&t), TLENGTH);
+		memcpy(buf.data + buf.length, reinterpret_cast<void*>(t), TLENGTH);
 		buf.length += TLENGTH;
 	}
 	else if constexpr (is_same_v<decay_t<T>, std::string>) {
-		WriteSequence(t.c_str(), t.length() * sizeof(char));
-
+		int sz = t->length();
+		Write(buf, &sz);
+		WriteSequence(buf, t->c_str(), t->length() * sizeof(char));
 	}
 
 }
@@ -155,12 +160,45 @@ template<typename T = int>
 void WriteArray(buffer& buf, T* t, int len);
 
 template<typename T>
-inline void WriteArray(buffer& buf, T* t, int len)
+void WriteArray(buffer& buf, T* t, int len)
 {
 	for (int i = 0; i < len; ++i)
-		Write<T&>(buf, t[i]);
-
+		Write<T>(buf, t + i);
 }
+template<typename T>requires is_arithmetic_v<T>
+bool ReadSequence(buffer& buf, T* t, int len) {
+	constexpr auto TLENGTH = sizeof(T);
+	if (buf.offset + TLENGTH * len > buf.length)
+		return false;
+	if constexpr (is_same_v<T, char>)
+		memcpy(t, buf.data + buf.offset, TLENGTH * len);
+	else
+	{
+		auto cast_t = (void*)(t);
+		memcpy(cast_t, buf.data + buf.offset, TLENGTH * len);
+	}
 
-
+	buf.offset += TLENGTH * len;
+	return true;
+}
+template<typename T>
+bool Read(buffer& buf, T* t) {
+	if constexpr (is_arithmetic_v<T>) {
+		ReadSequence(buf, t, 1);
+	}
+	else if constexpr (is_same_v<decay_t<T>, std::string>) {
+		int sz = 0;
+		ReadSequence(buf, &sz, 1);
+		string str(sz, '0');
+		ReadSequence(buf, str.c_str(), sz);
+		const_cast<string*>(t)->swap(str);
+	}
+	return true;
+}
+template<typename T>
+bool ReadArray(buffer& buf, T* t, int len) {
+	for (int i = 0; i < len; ++i)
+		if (!Read(buf, t))return false;
+	return true;
+}
 #endif //TEMPLATE_UTILITY_HEAD
