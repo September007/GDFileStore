@@ -42,12 +42,12 @@
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\build_WSL\\${name}",
       "installRoot": "${projectDir}\\install_WSL\\${name}",
-      "cmakeExecutable": "cmake",
       "cmakeCommandArgs": "-DVCPKG_TARGET_TRIPLET=x64-linux ",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_x64" ],
-      "wslPath": "${defaultWSLPath}"
+      "wslPath": "${defaultWSLPath}",
+      "cmakeExecutable": "cmake"
     }
   ]
 }

@@ -80,6 +80,7 @@ auto randomValue(T* des) {
 		static_assert(!is_same_v<T, T>);
 	}
 }
+//this interface seems to be irregular
 template<typename T>
 	requires is_arithmetic_v<T>
 auto randomValue() {
@@ -91,7 +92,6 @@ auto randomValue() {
 	return ret;
 }
 template<typename T>
-	requires  is_arithmetic_v<T> || is_same_v<decay_t<T>, string>
 auto randomValue(T * beg, int len) {
 	for (int i = 0; i < len; ++i)
 		randomValue(beg + i);
@@ -228,7 +228,7 @@ bool Read(buffer& buf, T* t) {
 template<typename T>
 bool ReadArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)
-		if (!Read(buf, t))return false;
+		if (!Read(buf, t+i))return false;
 	return true;
 }
 #endif //TEMPLATE_UTILITY_HEAD

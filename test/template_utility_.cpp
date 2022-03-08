@@ -7,7 +7,7 @@ TEST(assistant_utility, SpreadCall) {
 	auto ret0 = 0, ret1 = 0, ret2 = 0;
 	auto ct = [&](int i, int& ret) {
 		ret += i;
-		return i;
+		return i; 
 	};
 	auto cr = [&](const vector<int>& vi) {
 		return vi;
@@ -51,7 +51,8 @@ auto TestOneKindOfType(buffer& buf) {
 		T rd;
 		Read(buf, &rd);
 		EXPECT_EQ(rd, vec[i]);
-		ret += rd != vec[i];
+		if (rd != vec[i])
+			ret++;
 	}
 	//test WriteArray
 	T* datas = new T[tries], * read_datas = new T[tries];
@@ -59,7 +60,8 @@ auto TestOneKindOfType(buffer& buf) {
 	ReadArray(buf, read_datas, tries);
 	for (int i = 0; i < tries; ++i) {
 		EXPECT_EQ(datas[i], read_datas[i]);
-		ret += datas[i] != read_datas[i];
+		if(datas[i] != read_datas[i])
+			ret++;
 	}
 	//test WriteSequence
 	if constexpr (is_arithmetic_v<T>) {
@@ -69,7 +71,8 @@ auto TestOneKindOfType(buffer& buf) {
 		for (int i = 0; i < tries; ++i) {
 			auto x = datas[i] == read_datas[i];
 			EXPECT_TRUE(x);
-			ret += !x;
+			if (!x)
+				ret++;
 		}
 	}
 	delete[]datas, delete[]read_datas;
@@ -91,6 +94,11 @@ public:
 			   ::Read(buf, &cls->f) &&
 			   ::Read(buf, &cls->s);
 	}
+	void randomValue() {
+		::randomValue(&this->i);
+		::randomValue(&this->f);
+		::randomValue(&this->s);
+	}
 };
 class _clsWithMemberInterface {
 public:
@@ -108,15 +116,20 @@ public:
 			   ::Read(buf, &this->f) &&
 			   ::Read(buf, &this->s);
 	}
+	void randomValue() {
+		::randomValue(&this->i);
+		::randomValue(&this->f);
+		::randomValue(&this->s);
+	}
 };
 TEST(assistant_utility, serialize) {
 	buffer buf;
-	string s;
-	randomValue(&s);
-	Write(buf, &s);
-	string read_s;
-	Read(buf, &read_s);
-	EXPECT_EQ(s,read_s);
+	//string s;
+	//randomValue(&s);
+	//Write(buf, &s);
+	//string read_s;
+	//Read(buf, &read_s);
+	//EXPECT_EQ(s,read_s);
 	EXPECT_EQ(TestOneKindOfType<char>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<uint8_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<uint16_t>(buf), 0);
@@ -127,6 +140,8 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(TestOneKindOfType<int32_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<int64_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<string>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<_clsWithMemberInterface>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<_clsWithStaticInterface>(buf), 0);
 	_clsWithStaticInterface _cls, r_cls;
 	_cls.i = 100, _cls.f = 1000, _cls.s = "dasda";
 	Write(buf, &_cls);
