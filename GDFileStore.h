@@ -1,6 +1,7 @@
 #include<deps.h>
 #include<sys/stat.h>
-#include<boost/format.hpp>
+//#include<boost/format.hpp>
+#include<fmt/format.h>
 #include<fstream>
 #include<filesystem>
 #include<spdlog/spdlog.h>
@@ -65,10 +66,10 @@ private:
 	//file suffix is .txt
 	string _GetObjectStoragePath(Object obj) {
 		auto pg = _GetPageGroup(obj);
-		return (boost::format("%1%/%2%/%3%.txt") % this->path % pg.name % obj.name).str();
+		return fmt::format("{}/{}/{}.txt", this->path, pg.name, obj.name);
 	}
 	string _GetPageGroupStoragePath(PageGroup pg) {
-		return (boost::format("%1%/%2%") % this->path % pg.name).str();
+		return fmt::format("{}/{}", this->path, pg.name);
 	}
 	bool _IsDirectoryExists(const char* path) {
 		return filesystem::is_directory(path);
@@ -86,14 +87,15 @@ private:
 	file_object_data_type _get_object_data(Object obj);
 	//return true if success
 	//@Todo: save file in binary if content contains illegal char
+	//@Todo: postphone to mannage coruntine to improving performance and potential lack of descriptor
 	bool _StoreObjectData(Object obj, file_object_data_type data);
 	//@Todo: transaction
 	//@Todo: ops
 	//@Todo: mount unmount
 public:
 	/*
-	 * the projection from Object to PageGroup, here just define as a simple linear mod after hash
-	 * in the future ,this could become a search in a map
+	 * the projection from Object to PageGroup, here just  defining as a simple linear mod after hash
+	 * in the future ,this could become a search in a metadata map
 	 */
 	PageGroup _GetPageGroup(const Object obj) {
 		constexpr int PG_count_limit = 10;

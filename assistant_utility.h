@@ -48,19 +48,40 @@ SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
 }
 
 template<typename T>
-	requires is_move_assignable_v<decay_t<T>>&& is_arithmetic_v<T>
 auto randomValue(T* des) {
 	using DT = decay_t<T>;
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
-	for (int i = 0; i<int(sizeof(DT)); ++i) {
-		auto rando_result = (rando() % 255) + 1;
-		*(reinterpret_cast<unsigned char*>(des)) = rando_result;
+	if constexpr (std::is_arithmetic_v<T>) 
+	{
+		for (int i = 0; i<int(sizeof(DT)); ++i) {
+			auto rando_result = (rando() % 255) + 1;
+			*(reinterpret_cast<unsigned char*>(des)) = rando_result;
+		}
+	}
+	else if constexpr(is_same_v<decay_t<T>, std::string>) {
+		constexpr int len = 1000;
+		static char buffer[len];
+		static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
+		const int strlen = (rando() % sizeof(buffer));
+		for (int i = 0; i < strlen; ++i)
+			buffer[i] = (rando() % ('z' - '0' + 1)) + '0';
+		buffer[strlen] = '0';
+		new(des) string(buffer);
+	}
+	else if constexpr (requires(T t) { T::randomValue(&t); }) {
+		T::randomValue(des);
+	}
+	else if constexpr (requires(T t) { t.randomValue(); }) {
+		des->randomValue();
+	}
+	else {
+		//directly write down static_assert(false) would result in compile bug(or not?)
+		//use is_same_v<T,T> to postphone analyse until specialization
+		static_assert(!is_same_v<T, T>);
 	}
 }
-//addtional support for string
-inline void randomValue(string* str);
 template<typename T>
-	requires is_move_assignable_v<decay_t<T>>&& is_arithmetic_v<T>&& is_constructible_v<T, decay_t<T>>
+	requires is_arithmetic_v<T>
 auto randomValue() {
 	using DT = decay_t<T>;
 	DT ret;
@@ -70,30 +91,16 @@ auto randomValue() {
 	return ret;
 }
 template<typename T>
-	requires is_move_assignable_v<T>&& is_arithmetic_v<T> || is_same_v<decay_t<T>, string>
+	requires  is_arithmetic_v<T> || is_same_v<decay_t<T>, string>
 auto randomValue(T * beg, int len) {
 	for (int i = 0; i < len; ++i)
 		randomValue(beg + i);
 }
 
-inline void randomValue(string* str) {
-	constexpr int len = 1000;
-	static char buffer[len];
-	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
-	const int strlen = (rando() % sizeof(buffer));
-	for (int i = 0; i < strlen; ++i)
-		buffer[i] = (rando() % ('z' - '0' + 1)) + '0';
-	buffer[strlen] = '0';
-	new(str) string(buffer);
-}
-
-//Serialize and Unserialize , usr std::span
-// using buffer_base = std::span<uint8_t,std::dynamic_extent>;
-
-
+//Serialize and Unserialize 
+//buffer is obligate to control data block
 class buffer {
 public:
-
 	static auto static_logger() {
 		static auto _logger = spdlog::synchronous_factory::create<spdlog::sinks::basic_file_sink_st>
 			("buffer", "logs/buffer.log", false);
@@ -129,18 +136,19 @@ public:
 		return true;
 	}
 	~buffer() {
-		delete data;
+		delete []data;
 	}
 };
 
-//different from WriteArray,this requre T is pod type
+
+//different from WriteArray,this requre T is arithmetic type
 template<typename T >requires is_arithmetic_v<T>
 void WriteSequence(buffer& buf, T* t, int len) {
 	buf._expand_prepare(sizeof(T) * len);
 	memcpy(buf.data + buf.length, t, sizeof(T) * len);
 	buf.length += sizeof(T) * len;
 }
-
+//call for atithmetic,string and class with static or member Write(static first)
 template<typename T = int>
 void Write(buffer& buf, T* t) {
 	constexpr auto TLENGTH = sizeof(T);
@@ -153,11 +161,19 @@ void Write(buffer& buf, T* t) {
 		int sz = t->length();
 		Write(buf, &sz);
 		WriteSequence(buf, t->c_str(), t->length() * sizeof(char));
+	}else if constexpr  (requires(T t) { T::Write(declval< buffer&>(),&t); })
+	{
+		T::Write(buf, t);
+	}
+	else if constexpr (requires(T t) { t.Write(declval< buffer&>()); })
+	{
+		t->Write(buf);
+	}
+	else {
+		static_assert(!is_same_v<T, T>);
 	}
 
 }
-template<typename T = int>
-void WriteArray(buffer& buf, T* t, int len);
 
 template<typename T>
 void WriteArray(buffer& buf, T* t, int len)
@@ -165,6 +181,7 @@ void WriteArray(buffer& buf, T* t, int len)
 	for (int i = 0; i < len; ++i)
 		Write<T>(buf, t + i);
 }
+//return true if success
 template<typename T>requires is_arithmetic_v<T>
 bool ReadSequence(buffer& buf, T* t, int len) {
 	constexpr auto TLENGTH = sizeof(T);
@@ -181,6 +198,8 @@ bool ReadSequence(buffer& buf, T* t, int len) {
 	buf.offset += TLENGTH * len;
 	return true;
 }
+//return true if success
+//call for arithmetic,string,and class with static or member Read(static first)
 template<typename T>
 bool Read(buffer& buf, T* t) {
 	if constexpr (is_arithmetic_v<T>) {
@@ -193,8 +212,19 @@ bool Read(buffer& buf, T* t) {
 		ReadSequence(buf, str.c_str(), sz);
 		const_cast<string*>(t)->swap(str);
 	}
+	else if constexpr (requires(T t) { T::Read(declval<buffer&>(), &t); })
+	{
+		T::Read(buf, t);
+	}
+	else if constexpr (requires(T t) { t.Read(buf); }) {
+		t->Read(buf);
+	}
+	else {
+		static_assert(!is_same_v<T, T>);
+	}
 	return true;
 }
+//return true if success
 template<typename T>
 bool ReadArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)

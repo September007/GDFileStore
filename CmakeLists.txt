@@ -36,9 +36,14 @@ add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
 include_directories( ./test . ./deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
 # import gtest for test
 find_package(GTest CONFIG REQUIRED)
-find_package(Boost REQUIRED  )
+# find_package(Boost REQUIRED  ) replace boost::format with fmt
+find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED) 
-find_package(RocksDB CONFIG REQUIRED)
+find_package(RocksDB CONFIG REQUIRED) 
+# head only
+find_package(nlohmann_json CONFIG REQUIRED)
+
+#target_link_libraries(main PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 set (dependencis 
             PUBLIC  GTest::gtest 
             PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb)

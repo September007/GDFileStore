@@ -75,6 +75,40 @@ auto TestOneKindOfType(buffer& buf) {
 	delete[]datas, delete[]read_datas;
 	return ret;
 }
+class _clsWithStaticInterface {
+public:
+	int i;
+	float f;
+	string s;
+	bool operator==(const _clsWithStaticInterface&) const= default;
+	static void Write(buffer& buf, _clsWithStaticInterface *cls) {
+		::Write(buf, &cls->i);
+		::Write(buf, &cls->f);
+		::Write(buf, &cls->s);
+	}
+	static bool Read(buffer& buf, _clsWithStaticInterface *cls) {
+		return ::Read(buf, &cls->i) &&
+			   ::Read(buf, &cls->f) &&
+			   ::Read(buf, &cls->s);
+	}
+};
+class _clsWithMemberInterface {
+public:
+	int i;
+	float f;
+	string s;
+	bool operator==(const _clsWithMemberInterface&) const = default;
+	void Write(buffer& buf) {
+		::Write(buf, &this->i);
+		::Write(buf, &this->f);
+		::Write(buf, &this->s);
+	}
+	bool Read(buffer& buf) {
+		return ::Read(buf, &this->i) &&
+			   ::Read(buf, &this->f) &&
+			   ::Read(buf, &this->s);
+	}
+};
 TEST(assistant_utility, serialize) {
 	buffer buf;
 	string s;
@@ -93,5 +127,15 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(TestOneKindOfType<int32_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<int64_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<string>(buf), 0);
-	int asda;
+	_clsWithStaticInterface _cls, r_cls;
+	_cls.i = 100, _cls.f = 1000, _cls.s = "dasda";
+	Write(buf, &_cls);
+	Read(buf, &r_cls);
+	EXPECT_EQ(_cls, r_cls);
+	_clsWithMemberInterface _mcls, r_mcls;
+	_mcls.i = 100, _mcls.f = 1000, _mcls.s = "dasda";
+	Write(buf, &_mcls);
+	Read(buf, &r_mcls);
+	EXPECT_EQ(_mcls, r_mcls);
+
 }
