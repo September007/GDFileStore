@@ -11,14 +11,38 @@
 #include<spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include<string_view>
+#include<fmt/format.h>
+#include<filesystem>
 using namespace std;
 
+inline auto GetLogger(const string& name) {
+	//@Todo: read log file root from json
+	static auto logFileRoot = filesystem::absolute("/tmp/logs").string();
+	auto ret = spdlog::get(name);
+	//if missing,create
+	if (ret == nullptr) {
+		{
+			auto logfilename = fmt::format("{}/{}.log", logFileRoot, name);
+			ret = spdlog::synchronous_factory::create<spdlog::sinks::basic_file_sink_st>
+				(name, logfilename, false);
+			//if create failed, return default
+			if (!ret) {
+				spdlog::warn("create log file[{}]failed {}:{}", logfilename, __FILE__, __LINE__);
+				ret = spdlog::default_logger();
+			}
+		}
+	}
+	return ret;
 
+}
+inline auto Error_Exit() {
+	spdlog::default_logger()->error("get error exit,check log for more info");
+	exit(0);
+}
 inline std::string getTimeStr(std::string_view fmt) {
 	std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-	std::string s(30, '\0');
-	std::strftime(&s[0], s.size(), fmt.data(), std::localtime(&now));
+	char s[40] = {};
+	std::strftime(&s[0], 40, fmt.data(), std::localtime(&now));
 	return s;
 }
 inline std::string getTimeStr() {
@@ -51,14 +75,14 @@ template<typename T>
 auto randomValue(T* des) {
 	using DT = decay_t<T>;
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
-	if constexpr (std::is_arithmetic_v<T>) 
+	if constexpr (std::is_arithmetic_v<T>)
 	{
 		for (int i = 0; i<int(sizeof(DT)); ++i) {
 			auto rando_result = (rando() % 255) + 1;
 			*(reinterpret_cast<unsigned char*>(des)) = rando_result;
 		}
 	}
-	else if constexpr(is_same_v<decay_t<T>, std::string>) {
+	else if constexpr (is_same_v<decay_t<T>, std::string>) {
 		constexpr int len = 1000;
 		static char buffer[len];
 		static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
@@ -92,7 +116,7 @@ auto randomValue() {
 	return ret;
 }
 template<typename T>
-auto randomValue(T * beg, int len) {
+auto randomValue(T* beg, int len) {
 	for (int i = 0; i < len; ++i)
 		randomValue(beg + i);
 }
@@ -136,7 +160,7 @@ public:
 		return true;
 	}
 	~buffer() {
-		delete []data;
+		delete[]data;
 	}
 };
 
@@ -161,7 +185,8 @@ void Write(buffer& buf, T* t) {
 		int sz = t->length();
 		Write(buf, &sz);
 		WriteSequence(buf, t->c_str(), t->length() * sizeof(char));
-	}else if constexpr  (requires(T t) { T::Write(declval< buffer&>(),&t); })
+	}
+	else if constexpr (requires(T t) { T::Write(declval< buffer&>(), &t); })
 	{
 		T::Write(buf, t);
 	}
@@ -228,7 +253,7 @@ bool Read(buffer& buf, T* t) {
 template<typename T>
 bool ReadArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)
-		if (!Read(buf, t+i))return false;
+		if (!Read(buf, t + i))return false;
 	return true;
 }
 #endif //TEMPLATE_UTILITY_HEAD

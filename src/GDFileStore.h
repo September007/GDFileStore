@@ -1,10 +1,10 @@
 #include<deps.h>
 #include<sys/stat.h>
-//#include<boost/format.hpp>
 #include<fmt/format.h>
 #include<fstream>
 #include<filesystem>
 #include<spdlog/spdlog.h>
+#include<GDKeyValue.h>
 //@Todo: journal
 
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
@@ -12,27 +12,8 @@ template<typename T>
 	requires is_default_constructible_v<decay_t<T>>
 inline bool is_default(T &&t) { return t == decay_t<T>(); };
 
-class PageGroup {
-public:
-	string name;
-	PageGroup(const string& name="") :name(name) {}
-	PageGroup(const string&& name) :name(name) {}
-	bool operator==(const PageGroup&)const = default;
-	bool operator < (const PageGroup&)const = default;
-};
-
-class Object {
-public:
-	string name;
-	Object(const string& name="") :name(name) {}
-	Object(const string&& name) :name(name) {}
-	bool operator==(const Object&)const = default;
-	bool operator < (const Object&)const = default;
-};
-//@Todo: kv store
-class KVStore {
-
-};
+//1. call LoadDB() before use db
+//2. 
 class GDFileStore {
 #ifdef TEST_ON
 	//this is test class,which need access
@@ -40,7 +21,7 @@ class GDFileStore {
 #endif
 //types define
 public:
-	using KVStore_type = KVStore;
+	using KVStore_type = RocksKV;
 	using file_object_data_type = std::string;
 
 // private member data
@@ -51,16 +32,27 @@ private:
 	string path;
 
 public:
-	template<typename ...KVInitialArgs>requires is_constructible_v<KVStore_type,KVInitialArgs...>
-	explicit GDFileStore(const string& StorePath, KVInitialArgs&&... kvinitialArgs) :
- 		path(std::filesystem::absolute(StorePath).generic_string()), kv(std::forward<KVInitialArgs&&>( kvinitialArgs)...) {};
+	
+	explicit GDFileStore(const string& StorePath) :
+		path(std::filesystem::absolute(StorePath).generic_string()),
+		kv(fmt::format("{}/kv", std::filesystem::absolute(StorePath).generic_string())) {};
 	GDFileStore(const GDFileStore&) = delete;
 	GDFileStore(GDFileStore&&) = delete;
 	//attributes interface for GET 
 
 	auto get_KVStore() { return &kv; }
 	auto get_path() { return path; }
-
+	//load kv,return true if success
+	auto Mount() {
+		if (!kv.LoadDB()) {
+			GetLogger("GDFileStore")->error("load kv db failed when mount[{}].{}:{}", this->path, __FILE__, __LINE__);
+			return false;
+		}
+		return true;
+	}
+	auto UnMount() {
+		return kv.UnLoadDB();
+	}
 private: 
 	//internal interface for object data
 	//file suffix is .txt
@@ -91,7 +83,6 @@ private:
 	bool _StoreObjectData(Object obj, file_object_data_type data);
 	//@Todo: transaction
 	//@Todo: ops
-	//@Todo: mount unmount
 public:
 	/*
 	 * the projection from Object to PageGroup, here just  defining as a simple linear mod after hash

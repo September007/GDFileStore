@@ -17,10 +17,9 @@ auto createDB(const string& path) {
 		rocksdb::DB::Open(options, path, &db);
 	EXPECT_TRUE(status.ok());
 	return db;
-}
-TEST(rocksdb, put_get_delete) {
-	//create && delete
-	auto db=createDB(path);
+};
+void test_put_get_delete(rocksdb::DB*db) {
+
 	auto rp = rocksdb::ReadOptions();
 	auto wp = rocksdb::WriteOptions();
 	vector<string> ks(tries), vs(tries);
@@ -45,7 +44,48 @@ TEST(rocksdb, put_get_delete) {
 		EXPECT_EQ(value, "");
 		EXPECT_TRUE(!status.ok());
 	}
-	
+
+}
+TEST(rocksdb, put_get_delete) {
+	//create && delete
+	auto db = createDB(::path);
+	test_put_get_delete(db);
 	delete db;
 	filesystem::remove_all(path);
+};
+TEST(RocksKV, interface) {
+	RocksKV kv("/tmp/testKV");
+	EXPECT_TRUE(kv.LoadDB());
+	
+	constexpr auto tries = 1000;
+	vector<string> keys(tries), values(tries);
+	randomValue(&keys[0],tries);
+	randomValue(&values[0], tries);
+	//set
+	for (int i = 0; i < tries; ++i)
+		kv.SetValue(keys[i], values[i]);
+	//get
+	for (int i = 0; i < tries; ++i)
+	{
+		string got;
+		kv.GetValue(keys[i], got);
+		EXPECT_EQ(values[i], got);
+	}
+	//remove
+	for (int i = 0; i < tries; ++i)
+		EXPECT_TRUE(kv.RemoveKey(keys[i]).ok());
+	//sets
+	vector<pair<RocksKV::key_type, RocksKV::value_type>> kvs(tries);
+	for (int i = 0; i < tries; ++i)
+		kvs[i] = { keys[i],values[i] };
+	kv.SetValues(kvs);
+	//gets
+	vector<RocksKV::value_type> gets_;
+	kv.GetValues(keys, gets_);
+	EXPECT_EQ(gets_, values);
+	//remove s
+	auto ret=	kv.RemoveKeys(keys);
+	for (auto r : ret) {
+		EXPECT_TRUE(r.ok());
+	}
 }

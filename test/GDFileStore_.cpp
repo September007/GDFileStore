@@ -32,7 +32,7 @@ struct GDFSTest {
 			auto len0=readContent.length(),len1=con.length();
 			EXPECT_EQ(readContent, contents[i]);
 		}
-		std::filesystem::remove_all(path);
+		//std::filesystem::remove_all(path);
 	}
 };
  TEST(GDFS, Store_Reserve) {

@@ -34,4 +34,10 @@ TEST(spdlog, global_access) {
     logger->warn("warn");
     logger->error("error");
     logger->info("quit");
+    
+}
+TEST(spdlog, performance) {
+    int tries = 1e5;
+    cout << "tries:" << tries << endl;
+    while (tries--)spdlog::get("newLogger")->info("{}test{}",getTimeStr(), tries);
 }
