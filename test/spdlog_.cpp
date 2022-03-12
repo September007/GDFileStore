@@ -26,18 +26,18 @@ TEST(spdlog, base) {
     SPDLOG_DEBUG("Some debug message");
 }
 TEST(spdlog, global_access) {
-    cout << string(5, '\n');
   //  spdlog::basic_logger_mt;
-    spdlog::synchronous_factory::create<spdlog::sinks::basic_file_sink_st>("newLogger", "logs/newLogger.log", false);
-    auto logger = spdlog::get("newLogger");
+    spdlog::synchronous_factory::create<spdlog::sinks::basic_file_sink_st>("newLogger", "logs/tmp.log", false);
+    auto logger = GetLogger("newLogger",true);
     logger->info("newLogger created at{}",chrono::system_clock::now().time_since_epoch().count());
     logger->warn("warn");
     logger->error("error");
     logger->info("quit");
-    
+    auto x=GetLogger("nonIntegrated");
+    EXPECT_TRUE(x!=nullptr);
+    x->info("dadsa");
 }
-TEST(spdlog, performance) {
+TEST(spdlog, performance_1e5) {
     int tries = 1e5;
-    cout << "tries:" << tries << endl;
-    while (tries--)spdlog::get("newLogger")->info("{}test{}",getTimeStr(), tries);
+    while (tries--)GetLogger("newLogger",true)->info("{}test{}",getTimeStr(), tries);
 }

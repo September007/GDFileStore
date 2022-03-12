@@ -1,6 +1,6 @@
 ﻿#pragma once
-#ifndef TEMPLATE_UTILITY_HEAD
-#define TEMPLATE_UTILITY_HEAD
+#ifndef ASSISTANT_UTILITY_HEAD
+#define ASSISTANT_UTILITY_HEAD
 
 #include<type_traits>
 #include<concepts>
@@ -13,11 +13,18 @@
 #include<string_view>
 #include<fmt/format.h>
 #include<filesystem>
+#include<nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include<fstream>
+#include<iostream>
 using namespace std;
 
-inline auto GetLogger(const string& name) {
+inline nlohmann::json GetSetting(const string& settingFile);
+inline shared_ptr<spdlog::logger> GetLogger(const string& name,const bool force_isolate=false){
 	//@Todo: read log file root from json
-	static auto logFileRoot = filesystem::absolute("/tmp/logs").string();
+	static auto logFileRoot = filesystem::absolute("./tmp/logs").string();
+	//set all output into one file for debug
+	if (!force_isolate&& name!= "integrated") return GetLogger("integrated");
 	auto ret = spdlog::get(name);
 	//if missing,create
 	if (ret == nullptr) {
@@ -34,6 +41,72 @@ inline auto GetLogger(const string& name) {
 	}
 	return ret;
 
+}
+template<typename T>
+inline void LogExpectOrWarn(const string logName, T&& t,T expect) {
+	if (t != expect) {
+		GetLogger(logName)->warn("expect {} but get {}.{}:{}", expect, t, __FILE__, __LINE__);
+	}
+}
+
+inline nlohmann::json GetSetting(const string& settingFile) {
+	static nlohmann::json default_setting = R"({
+	"setting_name":"default",
+	"bool":{
+		"true_value":true,
+		"false_value":false
+	},
+	"string": "str_string"
+})"_json;
+	ifstream in(settingFile);
+	nlohmann::json setting;
+	if (in.good())
+		in >> setting;
+	else
+	{
+		GetLogger("json setting")->error("read setting file failed.{}[{}:{}]", settingFile, __FILE__, __LINE__);
+		setting = default_setting;
+	};
+	return setting;
+
+};
+inline string ReadFile(const string& path) {
+	fstream in(path);
+	if (!in.good()) {
+		GetLogger("default")->error("readfile[{}] failed.{}:{}",path, __FILE__, __LINE__);
+		return "";
+	}
+		in.seekg(0, ios_base::end);
+	size_t length = in.tellg();
+	in.seekg(ios_base::beg);
+	string ret;
+	//the last char on file[length-1] is '\0'
+	ret.resize(length);
+	in.read(const_cast<char*>(ret.c_str()), length);
+	//if (ret.back() == '\0')ret.pop_back();
+	return ret;
+}
+inline bool WriteFile(const string& path, const string& content,const bool create_parent_dir_if_missing=true) {
+	auto objDir = path;
+	ofstream out(objDir);
+	if (!out.good()) {
+		auto parentDir = filesystem::path(objDir).parent_path();
+		//maybe missing pg directory
+		if (create_parent_dir_if_missing && !filesystem::is_directory(parentDir.c_str()))
+		{
+			GetLogger("default")->warn("write file[{}] failed because parent dir missed,now creating.{}:{}"
+				,path, __FILE__, __LINE__);
+			filesystem::create_directory(parentDir);
+			out.open(objDir);
+		}
+		else {
+			GetLogger("default")->warn("open file[{}] failed .{}:{}", path, __FILE__, __LINE__);
+			return false;
+		}
+	}
+	out << content << flush;
+	out.close();
+	return out.good();
 }
 inline auto Error_Exit() {
 	spdlog::default_logger()->error("get error exit,check log for more info");
@@ -52,19 +125,19 @@ inline std::string getTimeStr() {
 template<typename SpreadNode, typename ChildTask, typename CollectRets, typename ...RestParams>
 	requires invocable<ChildTask, SpreadNode, RestParams...>
 && invocable< CollectRets, vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>&&>
-invoke_result_t<CollectRets, vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>&&>
-SpreadCall(ChildTask ct, CollectRets cr, vector<SpreadNode> vs, RestParams&&... restParams) {
+inline invoke_result_t<CollectRets, vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>&&>
+ SpreadCall(ChildTask ct, CollectRets cr, vector<SpreadNode> vs, RestParams&&... restParams) {
 	using ChildTaskCallResultType = invoke_result_t<ChildTask, SpreadNode, RestParams...>;
 	vector<ChildTaskCallResultType> retparam;
 	for (auto& node : vs)
 		retparam.push_back(ct(node, forward<RestParams>(restParams)...));
 	auto ret = cr(retparam);
-	return ret;
+	return ret; 
 }
 
 template<typename SpreadNode, typename ChildTask, typename ...RestParams>
 	requires invocable<ChildTask, SpreadNode, RestParams...>
-vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>
+inline vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>
 SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
 	return SpreadCall(ct,
 		[](vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>> rets) {return rets; },
@@ -72,7 +145,7 @@ SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
 }
 
 template<typename T>
-auto randomValue(T* des) {
+inline auto randomValue(T* des) {
 	using DT = decay_t<T>;
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
 	if constexpr (std::is_arithmetic_v<T>)
@@ -107,7 +180,7 @@ auto randomValue(T* des) {
 //this interface seems to be irregular
 template<typename T>
 	requires is_arithmetic_v<T>
-auto randomValue() {
+inline auto randomValue() {
 	using DT = decay_t<T>;
 	DT ret;
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
@@ -116,7 +189,7 @@ auto randomValue() {
 	return ret;
 }
 template<typename T>
-auto randomValue(T* beg, int len) {
+inline auto randomValue(T* beg, int len) {
 	for (int i = 0; i < len; ++i)
 		randomValue(beg + i);
 }
@@ -146,10 +219,10 @@ public:
 		if (addtionalLength + length > buffer_length)
 			try {
 			auto newBufferLength = (addtionalLength + length) * incre_factor;
-			auto new_data = new UnitType[newBufferLength];
+			auto new_data = (UnitType*)malloc(sizeof(UnitType)*newBufferLength);// UnitType[newBufferLength];
 			memcpy(new_data, data, length);
 			buffer_length = newBufferLength;
-			delete data;
+			free(data);
 			data = new_data;
 		}
 		catch (...) {
@@ -160,21 +233,21 @@ public:
 		return true;
 	}
 	~buffer() {
-		delete[]data;
+		free(data);
 	}
 };
 
 
 //different from WriteArray,this requre T is arithmetic type
 template<typename T >requires is_arithmetic_v<T>
-void WriteSequence(buffer& buf, T* t, int len) {
+inline void WriteSequence(buffer& buf, T* t, int len) {
 	buf._expand_prepare(sizeof(T) * len);
 	memcpy(buf.data + buf.length, t, sizeof(T) * len);
 	buf.length += sizeof(T) * len;
 }
 //call for atithmetic,string and class with static or member Write(static first)
 template<typename T = int>
-void Write(buffer& buf, T* t) {
+inline void Write(buffer& buf, T* t) {
 	constexpr auto TLENGTH = sizeof(T);
 	if constexpr (is_arithmetic_v<T>) {
 		buf._expand_prepare(TLENGTH);
@@ -201,14 +274,14 @@ void Write(buffer& buf, T* t) {
 }
 
 template<typename T>
-void WriteArray(buffer& buf, T* t, int len)
+inline void WriteArray(buffer& buf, T* t, int len)
 {
 	for (int i = 0; i < len; ++i)
 		Write<T>(buf, t + i);
 }
 //return true if success
 template<typename T>requires is_arithmetic_v<T>
-bool ReadSequence(buffer& buf, T* t, int len) {
+inline bool ReadSequence(buffer& buf, T* t, int len) {
 	constexpr auto TLENGTH = sizeof(T);
 	if (buf.offset + TLENGTH * len > buf.length)
 		return false;
@@ -226,7 +299,7 @@ bool ReadSequence(buffer& buf, T* t, int len) {
 //return true if success
 //call for arithmetic,string,and class with static or member Read(static first)
 template<typename T>
-bool Read(buffer& buf, T* t) {
+inline bool Read(buffer& buf, T* t) {
 	if constexpr (is_arithmetic_v<T>) {
 		ReadSequence(buf, t, 1);
 	}
@@ -251,9 +324,9 @@ bool Read(buffer& buf, T* t) {
 }
 //return true if success
 template<typename T>
-bool ReadArray(buffer& buf, T* t, int len) {
+inline bool ReadArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)
 		if (!Read(buf, t + i))return false;
 	return true;
 }
-#endif //TEMPLATE_UTILITY_HEAD
+#endif //ASSISTANT_UTILITY_HEAD

@@ -5,6 +5,7 @@
 #include<filesystem>
 #include<spdlog/spdlog.h>
 #include<GDKeyValue.h>
+#include<FileJournal.h>
 //@Todo: journal
 
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
@@ -35,7 +36,11 @@ public:
 	
 	explicit GDFileStore(const string& StorePath) :
 		path(std::filesystem::absolute(StorePath).generic_string()),
-		kv(fmt::format("{}/kv", std::filesystem::absolute(StorePath).generic_string())) {};
+		kv(fmt::format("{}/kv", std::filesystem::absolute(StorePath).generic_string())) ,
+		journal(fmt::format("{}/journal", std::filesystem::absolute(StorePath).generic_string())){
+			if(!filesystem::is_directory(path))
+			filesystem::create_directory(path);
+	};
 	GDFileStore(const GDFileStore&) = delete;
 	GDFileStore(GDFileStore&&) = delete;
 	//attributes interface for GET 
@@ -53,9 +58,30 @@ public:
 	auto UnMount() {
 		return kv.UnLoadDB();
 	}
+	//journal
+	Journal journal;
+
 private: 
 	//internal interface for object data
 	//file suffix is .txt
+	auto _WriteJournal(Object obj, const string& content) {
+		auto objDirHashInt = to_string(std::hash<string>()(obj.name));
+		auto ret= journal.Write(objDirHashInt, content);
+		if (!ret) {
+			GetLogger("Write")->error("write journal {} failed.{}:{}", objDirHashInt, __FILE__, __LINE__);
+			return false;
+		}
+		//value set empty
+		kv.SetValue("journal::write_" + _GetObjectStoragePath(obj), objDirHashInt);
+	}
+	auto flushWriteJournal() {
+		auto allWriteJournal = kv.GetMatchPrefix("journal::write_");
+		for (auto& writeJournal : allWriteJournal) {
+			auto objDir = writeJournal.first. substr(string("journal::write_").size());
+			auto objContent = journal.Read(writeJournal.second);
+			WriteFile(objDir, objContent);
+		}
+	}
 	string _GetObjectStoragePath(Object obj) {
 		auto pg = _GetPageGroup(obj);
 		return fmt::format("{}/{}/{}.txt", this->path, pg.name, obj.name);
@@ -76,11 +102,16 @@ private:
 		return std::filesystem::create_directories(path);
 	}
 	//call this after confirm object exists
-	file_object_data_type _get_object_data(Object obj);
+	file_object_data_type _get_object_data(Object obj) {
+		return ReadFile(_GetObjectStoragePath(obj));
+	}
 	//return true if success
 	//@Todo: save file in binary if content contains illegal char
 	//@Todo: postphone to mannage coruntine to improving performance and potential lack of descriptor
-	bool _StoreObjectData(Object obj, file_object_data_type data);
+	bool _StoreObjectData(Object obj, file_object_data_type data) {
+		auto objDir = _GetObjectStoragePath(obj);
+		return 	WriteFile(objDir, data, true);
+	}
 	//@Todo: transaction
 	//@Todo: ops
 public:

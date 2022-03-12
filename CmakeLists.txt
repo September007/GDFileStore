@@ -12,7 +12,7 @@ endif()
 if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}" CACHE STRING "")
 endif()
-set(GTest_DIR /usr/local/vcpkg/installed/x64-linux/share/GTest)
+#set(GTest_DIR /usr/local/vcpkg/installed/x64-linux/share/GTest)
 # parse regex_path
 function( parse_regex_path return_set regex_path)
     set(regex_path ${regex_path} ${ARGN})

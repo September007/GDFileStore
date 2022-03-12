@@ -154,3 +154,16 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(_mcls, r_mcls);
 
 }
+
+TEST(file, read) {
+	string	path("./testout.txt");
+	ofstream out(path);
+	char str[10] = { 'a','b','c','\0','e','f','h','8','9','\0'};
+	for (auto c : str)
+		out << c;
+	out.close();
+	auto read = ReadFile(path);
+	EXPECT_EQ(read.size(), 10);
+	for (int i = 0; i < 10; ++i)
+		EXPECT_EQ(read[i], str[i]);
+}

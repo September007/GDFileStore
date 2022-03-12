@@ -6,10 +6,10 @@
 #include<assistant_utility.h>
 #include<map>
 #include<vector>
+#include<boost/version.hpp>
 using std::string;
 using std::vector;
 using std::map;
-
 
 // kv interface
 // crud boy,ewwww
@@ -23,7 +23,7 @@ public:
 	bool is_db_loaded = false;
 	virtual bool LoadDB() = 0;
 	virtual bool UnLoadDB() = 0;
-	virtual ~KVBase()=0 {} ;
+	virtual ~KVBase() {};
 	virtual KVStatus GetValue(const key_type& key,value_type&)=0;
 	//only return those who have record
 	virtual vector<KVStatus> GetValues(const vector<key_type>& keys, vector<value_type>& retVals)=0;
@@ -39,7 +39,10 @@ public:
 	string storagePath = "";
 	RocksKV(const string& storagePath) :storagePath(filesystem::absolute( storagePath).string()) {}
 	~RocksKV() {
-		if (db)db->Close();
+		if (db) {
+			db->Close();
+			db = nullptr;
+		}
 	}
 	//return true if load success
 	bool LoadDB()override {
@@ -64,7 +67,7 @@ public:
 			this->db = nullptr;
 		}
 		return true;
-	}
+	} 
 	KVStatus GetValue(const key_type& key, value_type&val) override{
 		auto status = db->Get(rocksdb::ReadOptions(), key, &val);
 		return status;
@@ -84,6 +87,12 @@ public:
 			ret[i] = SetValue(vals[i].first, vals[i].second);
 		return ret;
 	}
+	map<key_type, KVStatus> SetValues(const map<key_type, value_type>& m) {
+		map<key_type, KVStatus> ret;
+		for (auto& p : m)
+			ret[p.first] = SetValue(p.first, p.second);
+		return ret;
+	}
 	KVStatus RemoveKey(const key_type& key)override {
 		return db->Delete(rocksdb::WriteOptions(), key);
 	}
@@ -93,8 +102,27 @@ public:
 			ret[i] = RemoveKey(keys[i]);
 		return ret;
 	}
+	vector<pair<key_type, value_type>> GetMatchPrefix(const string& prefix) {
+		auto it = db->NewIterator(rocksdb::ReadOptions());
+		vector<pair<key_type, value_type>> ret;
+		for (it->SeekForPrev(prefix); it->Valid(); it->Next()) {
+			if (beginWith(prefix, it->key().ToString()))
+				ret.push_back({ string(it->key().ToString()),string(it->value().ToString()) });
+		}
+		if (!it->status().ok()) {
+			std::cout << it->status().ToString();
+		}
+		//dont forget to delete it
+		delete it;
+		return ret;
+		
+	}
 
 private :
+	static bool beginWith(const string& pre, const string& str) {
+		if (pre.size() > str.size())return false;
+		return str.substr(0, pre.size()) == pre;
+	}
 	// note slice does not hold data,it just refer,so keep original data alive
 	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs){
 		vector<rocksdb::Slice> ret(strs.size());

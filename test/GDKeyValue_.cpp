@@ -89,3 +89,21 @@ TEST(RocksKV, interface) {
 		EXPECT_TRUE(r.ok());
 	}
 }
+
+TEST(RocksKV, GetWithPrefix) {
+	RocksKV kv(filesystem::absolute("/tmp/testdb1").string());
+	kv.LoadDB();
+	map<string, string> pres = { {"pre","dsd"},
+		{"pre0","dsda"},
+		{"predsad","sadsadsa"} 
+	}, all(pres);
+	all["dsad"] = "dasda";
+	all["dfdfd"] = "dasda";
+
+	kv.SetValues(all);
+	auto readPres = kv.GetMatchPrefix("pre");
+	for (auto x : readPres) {
+		EXPECT_EQ(pres[x.first], x.second);
+	}
+
+}
