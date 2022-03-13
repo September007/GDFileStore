@@ -5,84 +5,96 @@
     "minor": 20,
     "patch": 0
   },
-  "vendor": {},
   "configurePresets": [
     {
-      "name": "Windows-MSVC",
-      "displayName": "Windows-MSVC",
-      "description": "as the name says",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "name": "X64",
+      "hidden": true,
       "architecture": {
         "value": "x64",
         "strategy": "external"
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install_X64-Windows-MSVC/${presetName}"
-      },
+      }
+    },
+    {
+      "name": "X86",
+      "hidden": true,
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "Windows",
+      "hidden": true,
       "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/3.0": {
-          "hostOS": [ "Windows" ],
-          "intelliSenseMode": "windows-msvc-x64"
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": "Windows"
         }
       }
     },
     {
-      "name": "Linux-GCC",
-      "displayName": "Linux-GCC",
-      "description": "Sets Ninja generator, compilers, build and install directory, debug build type",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build_X64-Linux-GCC/${presetName}",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install_X64-Linux-GCC/${presetName}",
-        "VCPKG_TARGET_TRIPLET": "x86-linux"
-      },
-
-      "architecture": {
-        "strategy": "external",
-        "value": "x86"
-      },
+      "name": "Linux",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
       "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/3.0": {
-          "hostOS": [ "Linux" ]
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "hostOS": "Linux"
         }
+      }
+    },
+    {
+      "name": "X64-Windows",
+      "inherits": [ "Windows", "X64" ],
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "X86-Windows",
+      "inherits": [ "Windows", "X86" ],
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x86-windows"
+      }
+    },
+    {
+      "name": "X64-Linux",
+      "inherits": [ "Linux", "X64" ],
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
+    },
+    {
+      "name": "X86-Linux",
+      "inherits": [ "Linux", "X86" ],
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x86-linux"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "X64-msvc",
-      "inheritConfigureEnvironment": true,
-      "configurePreset": "Windows-MSVC",
-      "environment": {
-        "VCPKG_TARGET_TRIPLET": "x64-windows"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [ "Windows" ],
-          "intelliSenseMode": "windows-msvc-x64"
-        }
-      }
+      "name": "Job-4",
+      "hidden": true,
+      "jobs": 4
     },
     {
-      "name": "X86-msvc",
-      "inheritConfigureEnvironment": true,
-      "configurePreset": "Windows-MSVC",
-      "environment": {
-        "VCPKG_TARGET_TRIPLET": "x86-windows"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [ "Windows" ],
-          "intelliSenseMode": "windows-msvc-x86"
-        }
-      }
+      "name": "X64-Windows",
+      "configurePreset": "X64-Windows",
+      "inherits": ["Job-4"]
+    },
+    {
+      "name": "X86-Windows",
+      "configurePreset": "X86-Windows",
+      "inherits": [ "Job-4" ]
     },
     {
       "name": "X64-Linux",
-      "configurePreset": "Linux-GCC"
+      "configurePreset": "X64-Linux",
+      "inherits": [ "Job-4" ]
+    },
+    {
+      "name": "X86-Linux",
+      "configurePreset": "X86-Linux",
+      "inherits": [ "Job-4" ]
     }
   ]
 }

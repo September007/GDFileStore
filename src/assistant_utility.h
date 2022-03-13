@@ -76,14 +76,24 @@ inline string ReadFile(const string& path) {
 		GetLogger("default")->error("readfile[{}] failed.{}:{}",path, __FILE__, __LINE__);
 		return "";
 	}
-		in.seekg(0, ios_base::end);
+	string ret;
+#ifdef __linux__
+	in.seekg(0, ios_base::end);
 	size_t length = in.tellg();
 	in.seekg(ios_base::beg);
-	string ret;
 	//the last char on file[length-1] is '\0'
 	ret.resize(length);
 	in.read(const_cast<char*>(ret.c_str()), length);
 	//if (ret.back() == '\0')ret.pop_back();
+#else
+	//windows file storage would append {how much '\n' in file} '\0' chars at end of file
+	//so read as above would read these '\0'
+#ifdef _WIN32
+	stringstream ss;
+	ss << in.rdbuf();
+	ret = ss.str();
+#endif
+#endif
 	return ret;
 }
 inline bool WriteFile(const string& path, const string& content,const bool create_parent_dir_if_missing=true) {

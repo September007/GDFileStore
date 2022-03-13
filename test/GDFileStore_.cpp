@@ -11,7 +11,7 @@ struct GDFSTest {
 		string  path = "/testFolder";
 		GDFileStore g(path);
 		vector<string> names, contents;
-		constexpr int TC = 100;
+		constexpr int TC = 1;
 		for (int i = 0; i < TC; i++) {
 			names.push_back(fmt::format("test{:-03d}" , i));
 			int len = (rando() % 10) + 1;//+1 for set postive
@@ -37,6 +37,8 @@ struct GDFSTest {
 };
  TEST(GDFS, Store_Reserve) {
 	 GDFSTest::GDFS_Store_Reserve();
+	 constexpr auto x = sizeof(void*);
+	 cout << "size of void * is " << x << endl;
  }
 TEST(GDFS, file_stat) {
 
