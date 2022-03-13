@@ -57,14 +57,14 @@
     },
     {
       "name": "X64-Linux",
-      "inherits": [ "Linux", "X64" ],
+      "inherits": [ "X64","Linux" ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux"
       }
     },
     {
       "name": "X86-Linux",
-      "inherits": [ "Linux", "X86" ],
+      "inherits": [ "X86", "Linux" ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x86-linux"
       }
