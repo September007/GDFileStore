@@ -30,6 +30,19 @@ function( parse_regex_path return_set regex_path)
 endfunction()
  
 
+# use address sanitizer
+#add_compile_options("/fsanitize=address")
+option(ASAN_ENABLED "Build this target with AddressSanitizer" ON)
+
+if(ASAN_ENABLED)
+  if(MSVC)
+    add_compile_options( /fsanitize=address)
+  else()
+    add_compile_options(-fsanitize=address )
+    add_link_options( -fsanitize=address)
+  endif()
+endif()
+
 option(test_on "will build tests" ON)
 
 Project(GDFileStore)

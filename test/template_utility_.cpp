@@ -2,6 +2,7 @@
 #include<assistant_utility.h>
 //#include<data.h>
 constexpr auto tries = 100;
+#define head assistant_utility
 TEST(assistant_utility, SpreadCall) {
 	vector<int> params = { 1,2,3,4,5,5,6,6,6,3,6,3,7,7,7,77,7,3,7 };
 	auto ret0 = 0, ret1 = 0, ret2 = 0;

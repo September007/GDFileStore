@@ -13,7 +13,12 @@ public:
 // the projection from a global object to a certain osd storage object is 
 // pool->pg->obj
 // different pool mean or born to different deploy rule
-// here just have connection with pg and obj,but we still prepare the position for pool
+
+
+
+#define CEPH_SNAPDIR ((__u64)(-1))  /* reserved for hidden .snap dir */
+#define CEPH_NOSNAP  ((__u64)(-2))  /* "head", "live" revision */
+#define CEPH_MAXSNAP ((__u64)(-3))  /* largest valid snapid */
 
 class Snapid_t {
 public:
@@ -35,7 +40,12 @@ class HObject_t {
 public:
 	Object_t oid;
 	Snapid_t snap;
+	HObject_t(Object_t oid,Snapid_t snap) :oid(oid) {}
+	/*
+	*  don't wanna use these
+	*/
 private:
+	// genrated by Hash<string>()(oid.name)
 	uint32_t hash;
 	bool max;
 public:

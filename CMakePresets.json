@@ -38,6 +38,9 @@
       "vendor": {
         "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
           "hostOS": "Linux"
+        },
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": "Linux"
         }
       }
     },
@@ -45,7 +48,16 @@
       "name": "X64-Windows",
       "inherits": [ "Windows", "X64" ],
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-windows"
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "ASAN_ENABLED": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "windows-msvc-x64"
+        }
       }
     },
     {
@@ -53,11 +65,16 @@
       "inherits": [ "Windows", "X86" ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x86-windows"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "windows-msvc-x86"
+        }
       }
     },
     {
       "name": "X64-Linux",
-      "inherits": [ "X64","Linux" ],
+      "inherits": [ "X64", "Linux" ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux"
       }
@@ -72,29 +89,29 @@
   ],
   "buildPresets": [
     {
-      "name": "Job-4",
+      "name": "parallel",
       "hidden": true,
-      "jobs": 4
+      "jobs": 6
     },
     {
       "name": "X64-Windows",
       "configurePreset": "X64-Windows",
-      "inherits": ["Job-4"]
+      "inherits": [ "parallel" ],
     },
     {
       "name": "X86-Windows",
       "configurePreset": "X86-Windows",
-      "inherits": [ "Job-4" ]
+      "inherits": [ "parallel" ]
     },
     {
       "name": "X64-Linux",
       "configurePreset": "X64-Linux",
-      "inherits": [ "Job-4" ]
+      "inherits": [ "parallel" ]
     },
     {
       "name": "X86-Linux",
       "configurePreset": "X86-Linux",
-      "inherits": [ "Job-4" ]
+      "inherits": [ "parallel" ]
     }
   ]
 }
