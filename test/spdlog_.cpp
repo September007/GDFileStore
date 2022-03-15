@@ -1,3 +1,4 @@
+#include<test_head.h>
 #include<gtest/gtest.h>
 #include<assistant_utility.h>
 #include<deps.h>

@@ -36,7 +36,7 @@ option(ASAN_ENABLED "Build this target with AddressSanitizer" ON)
 
 if(ASAN_ENABLED)
   if(MSVC)
-    add_compile_options( /fsanitize=address)
+    add_compile_options( /fsanitize=address )
   else()
     add_compile_options(-fsanitize=address )
     add_link_options( -fsanitize=address)

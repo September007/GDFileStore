@@ -272,8 +272,13 @@ class buffer {
         // getTimeStr(), __FILE__, __LINE__);
         return false;
       }
-
-    return true;
+      return true;
+  }
+  //only when sz > buffer_length, trigger a buffer expand
+  void _Reserve(int sz) {
+      if (sz > buffer_length) {
+          _expand_prepare(sz-buffer_length);
+      }
   }
   ~buffer() { free(data); }
 };

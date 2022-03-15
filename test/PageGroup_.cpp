@@ -1,3 +1,4 @@
+#include<test_head.h>
 #include<GDFileStore.h>
 #include<gtest/gtest.h>
 #include<gtest/gtest.h>

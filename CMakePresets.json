@@ -96,7 +96,7 @@
     {
       "name": "X64-Windows",
       "configurePreset": "X64-Windows",
-      "inherits": [ "parallel" ],
+      "inherits": [ "parallel" ]
     },
     {
       "name": "X86-Windows",
@@ -112,6 +112,16 @@
       "name": "X86-Linux",
       "configurePreset": "X86-Linux",
       "inherits": [ "parallel" ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name":"_TEST_",
+      "displayName": "_TEST_",
+      "configurePreset": "X64-Linux",
+      "output": {"outputOnFailure": true},
+      "execution": {"noTestsAction": "error","stopOnFailure": true,"jobs": 6},
+      "filter": {"include": {"name": "*_"}}
     }
   ]
 }

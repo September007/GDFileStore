@@ -5,7 +5,7 @@
 #include <span>
 #include <string>
 #include <vector>
-#include<deps\deps.h>
+#include<deps/deps.h>
 using namespace std;
 // basic operations only have the below two
 enum class OperationType {

@@ -1,3 +1,4 @@
+#include<test_head.h>
 #include<FileJournal.h>
 #include<gtest/gtest.h>
 #define head FileJournal
@@ -19,7 +20,7 @@ TEST(head, CombineOperationsForOneSameObject) {
 	auto o0 = Operation(OperationType::Insert, s0, FilePos(0, FileAnchor::begin));//insert 12345 at 0, 12345
 	auto o1 = Operation(OperationType::Insert, s1, FilePos(5, FileAnchor::begin));//insert 67890 at 5,1234567890
 	auto o2 = Operation(OperationType::Delete, s2, FilePos(3, FileAnchor::begin));//delete span[4] at 3, 123890
-	auto o3 = Operation(OperationType::Insert, s3, FilePos(3, FileAnchor::begin));//insert abcd at3, 123abcd899
+	auto o3 = Operation(OperationType::Insert, s3, FilePos(3, FileAnchor::begin));//insert abcd at 3, 123abcd890
 	vector<Operation> operations = { o0,o1,o2,o3 };
 	auto objData = make_shared<buffer>();
 	int indicated_length = 0;
@@ -29,7 +30,5 @@ TEST(head, CombineOperationsForOneSameObject) {
 	string finalBufferstr(finalBuffer->data, finalBuffer->data + finalBuffer->length);
 	EXPECT_EQ(expect_buffer, finalBufferstr);
 	int *das= new int[10];
-	das[100] = 231231;
-	int iv100[100];
-	ivc100[1000] = 1;
+
 }
