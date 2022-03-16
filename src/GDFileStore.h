@@ -35,15 +35,20 @@ private:
 	KVStore_type kv;
 	//local filesystem store path for objects data
 	string path;
+	//journal
+	Journal journal;
 
 public:
 	
 	explicit GDFileStore(const string& StorePath) :
 		path(std::filesystem::absolute(StorePath).generic_string()),
-		kv(fmt::format("{}/kv", std::filesystem::absolute(StorePath).generic_string())) ,
+		kv(),
 		journal(fmt::format("{}/journal", std::filesystem::absolute(StorePath).generic_string())){
 			if(!filesystem::is_directory(path))
-			filesystem::create_directory(path);
+			filesystem::create_directories(path);
+			//set submodules root
+			kv.storagePath = GetKVRoot();
+			journal.storagePath = GetJournalRoot();
 	};
 	GDFileStore(const GDFileStore&) = delete;
 	GDFileStore(GDFileStore&&) = delete;
@@ -62,8 +67,6 @@ public:
 	auto UnMount() {
 		return kv.UnLoadDB();
 	}
-	//journal
-	Journal journal;
 
 private: 
 	//internal interface for object data
@@ -76,7 +79,7 @@ private:
 			return false;
 		}
 		//value set empty
-		kv.SetValue("journal::write_" + _GetObjectStoragePath(obj), objDirHashInt);
+		kv.SetValue("journal::write_" + GetGHObjectStoragePath(obj), objDirHashInt);
 	}
 	auto flushWriteJournal() {
 		auto allWriteJournal = kv.GetMatchPrefix("journal::write_");
@@ -86,34 +89,29 @@ private:
 			WriteFile(objDir, objContent);
 		}
 	}
-	string _GetObjectStoragePath(GHObject_t obj) {
-		auto pg = _GetPageGroup(obj);
-		return fmt::format("{}/{}/{}.txt", this->path, pg.name, obj.hobj.oid.name);
-	}
-	string _GetPageGroupStoragePath(PageGroup pg) {
-		return fmt::format("{}/{}", this->path, pg.name);
-	}
-	bool _IsDirectoryExists(const char* path) {
+	bool _IsDirectoryExists(const string &path) {
 		return filesystem::is_directory(path);
 	}
-	bool _IsFileExists(const char* path) {
+	bool _IsFileExists(const string &path) {
 		return filesystem::is_regular_file(path);
 	}
+	//@Todo : bloom filter
 	bool _IsObjectExists(GHObject_t obj) {
-		return _IsFileExists(obj.hobj.oid.name.c_str());
+		return _IsFileExists(GetGHObjectStoragePath(obj));
 	}
 	bool _CreateDir(const char* path) {
 		return std::filesystem::create_directories(path);
 	}
 	//call this after confirm object exists
 	file_object_data_type _get_object_data(GHObject_t obj) {
-		return ReadFile(_GetObjectStoragePath(obj));
+		auto objDir = GetGHObjectStoragePath(obj);
+		return ReadFile(objDir);
 	}
 	//return true if success
 	//@Todo: save file in binary if content contains illegal char
 	//@Todo: postphone to mannage coruntine to improving performance and potential lack of descriptor
 	bool _StoreObjectData(GHObject_t obj, file_object_data_type data) {
-		auto objDir = _GetObjectStoragePath(obj);
+		auto objDir = GetGHObjectStoragePath(obj);
 		return 	WriteFile(objDir, data, true);
 	}
 	//@Todo: transaction
@@ -123,10 +121,33 @@ public:
 	 * the projection from Object to PageGroup, here just  defining as a simple linear mod after hash
 	 * in the future ,this could become a search in a metadata map
 	 */
-	PageGroup _GetPageGroup(const GHObject_t obj) {
-		constexpr int PG_count_limit = 10;
-		if (is_default(obj))return PageGroup();
-		return PageGroup(to_string(std::hash<string>()(obj.hobj.oid.name)%PG_count_limit));
+	// projection from hobj(already have pool infomation) to pg
+	inline PageGroup GetPageGroupFroGHOBJ(const GHObject_t& ghobj)const {
+		PageGroup ret;
+		ret.pool = ghobj.hobj.pool;
+		// @Todo :may need visit metadata 
+		auto pgs = HObject_t::default_pg_numbers;
+		auto num = HashForGHObject_t()(ghobj) % pgs;
+		ret.name = fmt::format("{:>04}", num);
+		return ret;
+	}
+	/* 
+	* Storage Path Management
+	*/ 
+	//kv root
+	string GetKVRoot()const { return fmt::format("{}/KV", this->path); }
+	//journal root
+	string GetJournalRoot()const { return fmt::format("{}/Journal", this->path); }
+	//pgs parent path
+	string GetPageGroupsRoot()const { return fmt::format("{}/PG", this->path); }
+	//pg path
+	string GetPageGroupStoragePath(const PageGroup& pg) const {
+		return fmt::format("{}/{}", this->GetPageGroupsRoot(), pg.name);
+	}
+	//obj path
+	string GetGHObjectStoragePath(const GHObject_t& ghobj) const {
+		auto pg = GetPageGroupFroGHOBJ(ghobj);
+		return fmt::format("{}/{}.txt",this->GetPageGroupStoragePath(pg), ghobj.hobj.oid.name);
 	}
 };
 

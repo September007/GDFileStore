@@ -98,7 +98,7 @@ public:
 };
 struct HashForGHObject_t {
 	size_t operator()(const GHObject_t&ghobj)const{
-		size_t seed;
+		size_t seed = 0;
 		boost::hash_combine(seed, ghobj.hobj.oid.name);
 		boost::hash_combine(seed, ghobj.hobj.pool);
 		return seed;
@@ -114,14 +114,3 @@ public:
 	bool operator==(const PageGroup&)const = default;
 	bool operator < (const PageGroup&)const = default;
 };
-
-// projection from hobj(already have pool infomation) to pg
-inline PageGroup GetPageGroupFroGHOBJ(const GHObject_t& ghobj) {
-	PageGroup ret;
-	ret.pool = ghobj.hobj.pool;
-	// @Todo :may need visit metadata 
-	auto pgs = HObject_t::default_pg_numbers;
-	auto num=HashForGHObject_t()(ghobj) % pgs;
-	ret.name = fmt::format("{:>04}", num);
-	return ret;
-}

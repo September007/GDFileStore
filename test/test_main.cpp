@@ -1,5 +1,4 @@
 #include<test_head.h>
-
 #include<gtest/gtest.h>
 #include<iostream>
 #include<deps/mem.h>

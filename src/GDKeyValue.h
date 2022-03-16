@@ -37,7 +37,7 @@ class RocksKV :public KVBase {
 public:
 	rocksdb::DB* db = nullptr;
 	string storagePath = "";
-	RocksKV(const string& storagePath) :storagePath(filesystem::absolute( storagePath).string()) {}
+	RocksKV(const string& storagePath="") :storagePath(filesystem::absolute(storagePath).string()) {}
 	~RocksKV() {
 		if (db) {
 			db->Close();
