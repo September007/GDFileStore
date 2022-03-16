@@ -61,6 +61,8 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 	}
 }
 #pragma region assert
+#define LOG_ASSERT_TRUE(logName,condi,msg) do { if((condi)!=true) GetLogger(logName)->error(msg" expect true but get false.[{}]at {}:{}"\
+        ,#condi,__FILE__,__LINE__);}while(0)
 #define LOG_EXPECT_TRUE(logName,condi) do { if((condi)!=true) GetLogger(logName)->error("expect true but get false.[{}]at {}:{}"\
         ,#condi,__FILE__,__LINE__);}while(0)
 #define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not.[{}:{}]!=[{}:{}]at {}:{}"\
@@ -126,12 +128,12 @@ inline bool WriteFile(const string& path,
 		// maybe missing pg directory
 		if (create_parent_dir_if_missing &&
 			!filesystem::is_directory(parentDir.c_str())) {
-			GetLogger("IO")->warn(
-				"write file[{}] failed because parent dir missed,now creating.{}:{}",
-				path, __FILE__, __LINE__);
+			//GetLogger("IO")->warn(
+			//"write file[{}] failed because parent dir missed,now creating.{}:{}",
+			//	path, __FILE__, __LINE__);
 			filesystem::create_directories(parentDir);
 			out.open(objDir);
-			LOG_EXPECT_TRUE("default", out.good());
+			LOG_ASSERT_TRUE("IO", out.good(), "write file because create parent dir failed ");
 		}
 		else {
 			GetLogger("IO")->error("open file[{}] failed .{}:{}", path, __FILE__,
