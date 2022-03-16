@@ -113,4 +113,6 @@ inline void* GD_malloc(int sz, const char* description, const char* alloc_where)
 	HeapRecorder::instance().record(ret, HeapObjectInfo(ret, sz, description, "GD_malloc", alloc_where, "", ""));
 	return ret;
 }
+template<typename T>
+inline void GD_free(void* p, const char* release_where);
 #endif //MEM_HEAD

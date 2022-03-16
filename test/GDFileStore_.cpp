@@ -24,11 +24,11 @@ struct GDFSTest {
 			contents.push_back(std::move(content));
 		}
 		for (int i = 0; i < TC; ++i) {
-			auto ret = g._StoreObjectData(Object{ names[i] }, contents[i]);
+			auto ret = g._StoreObjectData(GHObject_t(HObject_t(Object_t( names[i]))), contents[i]);
 			EXPECT_EQ(ret, true);
 		}
 		for (int i = 0; i < TC; ++i) {
-			auto readContent = g._get_object_data(Object{ names[i] });
+			auto readContent = g._get_object_data(GHObject_t(HObject_t(Object_t(names[i]))));
 			auto con=contents[i];
 			auto len0=readContent.length(),len1=con.length();
 			EXPECT_EQ(readContent, contents[i]);

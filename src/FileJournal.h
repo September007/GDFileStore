@@ -160,6 +160,7 @@ public:
 			return ope.filePos.offset + endPos;
 	}
 };
+
 class Journal {
 public:
 	string storagePath;

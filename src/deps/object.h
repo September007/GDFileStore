@@ -1,12 +1,11 @@
 #pragma once 
 #include<string>
-#include <string>
+#include<boost/functional/hash.hpp>
 using std::string;
 class Object {
 public:
 	string name;
 	Object(const string& name = "") :name(name) {}
-	Object(const string&& name) :name(name) {}
 	bool operator==(const Object&)const = default;
 	bool operator < (const Object&)const = default;
 };
@@ -15,7 +14,7 @@ public:
 // different pool mean or born to different deploy rule
 
 
-
+// copied
 #define CEPH_SNAPDIR ((__u64)(-1))  /* reserved for hidden .snap dir */
 #define CEPH_NOSNAP  ((__u64)(-2))  /* "head", "live" revision */
 #define CEPH_MAXSNAP ((__u64)(-3))  /* largest valid snapid */
@@ -40,19 +39,23 @@ class HObject_t {
 public:
 	Object_t oid;
 	Snapid_t snap;
-	HObject_t(Object_t oid,Snapid_t snap) :oid(oid) {}
+	HObject_t(Object_t oid=Object_t(), Snapid_t snap=Snapid_t()) :oid(oid) {}
 	/*
 	*  don't wanna use these
 	*/
 private:
 	// genrated by Hash<string>()(oid.name)
-	uint32_t hash;
-	bool max;
+	[[maybe_unused]]
+	uint32_t hash=0;
+	[[maybe_unused]]
+	bool max = false;
 public:
 	// ignoring
 	static const int64_t POOL_META = -1;
 	static const int64_t POOL_TEMP_START = -2; // and then negative
 	int64_t pool = 0;
+	//default counts of pg in a pool
+	static constexpr int default_pg_numbers = 100;
 	static bool is_temp_pool(int64_t pool) {
 		return pool <= POOL_TEMP_START;
 	}
@@ -63,13 +66,45 @@ public:
 		return pool == POOL_META;
 	}
 };
-//generation hash object
+
+using gen_t = int64_t;
+struct shard_id_t {
+	int8_t id;
+
+	shard_id_t() : id(0) {}
+	explicit shard_id_t(int8_t _id) : id(_id) {}
+
+	operator int8_t() const { return id; }
+
+	static inline shard_id_t NO_SHARD() { return shard_id_t(0); };
+};
+//generation hash object, or the global balah object
 class GHObject_t {
 public:
 	HObject_t hobj;
-	
+	gen_t generation;
+	shard_id_t shard_id;
+	// these implement is needed
+	GHObject_t(const HObject_t& hobj = HObject_t(), gen_t generation=0, shard_id_t shard_id=shard_id_t::NO_SHARD()) :
+		hobj(hobj), generation(generation), shard_id(shard_id) {
+	}
+	bool operator<(const GHObject_t ot)const {
+		return this->hobj.oid.name < ot.hobj.oid.name ||
+			this->hobj.oid.name == ot.hobj.oid.name && this->hobj.pool < ot.hobj.pool;
+	};
+	bool operator==(const GHObject_t& ot)const {
+		return this->hobj.oid.name == ot.hobj.oid.name && this->hobj.pool == ot.hobj.pool;
+	}
 };
-
+struct HashForGHObject_t {
+	size_t operator()(const GHObject_t&ghobj)const{
+		size_t seed;
+		boost::hash_combine(seed, ghobj.hobj.oid.name);
+		boost::hash_combine(seed, ghobj.hobj.pool);
+		return seed;
+	}
+};
+// Page Group
 class PageGroup {
 public:
 	string name;
@@ -79,3 +114,14 @@ public:
 	bool operator==(const PageGroup&)const = default;
 	bool operator < (const PageGroup&)const = default;
 };
+
+// projection from hobj(already have pool infomation) to pg
+inline PageGroup GetPageGroupFroGHOBJ(const GHObject_t& ghobj) {
+	PageGroup ret;
+	ret.pool = ghobj.hobj.pool;
+	// @Todo :may need visit metadata 
+	auto pgs = HObject_t::default_pg_numbers;
+	auto num=HashForGHObject_t()(ghobj) % pgs;
+	ret.name = fmt::format("{:>04}", num);
+	return ret;
+}
