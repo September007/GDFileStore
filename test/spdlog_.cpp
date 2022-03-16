@@ -36,7 +36,6 @@ TEST(spdlog, global_access) {
     logger->info("quit");
     auto x=GetLogger("nonIntegrated");
     EXPECT_TRUE(x!=nullptr);
-    x->info("dadsa");
 }
 TEST(spdlog, performance_1e5) {
     int tries = 1e5;
