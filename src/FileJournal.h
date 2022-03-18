@@ -40,7 +40,7 @@ public:
 	*/
 	Slice data;
 	// operation related object
-	Object_t obj;
+	GHObject_t obj;
 	// operation begin point
 	FilePos filePos;
 	Operation(OperationType operationType, Slice data, FilePos filePos)
@@ -106,7 +106,7 @@ public:
 					LOG_EXPECT_EQ("Journal", operation.data.start, 0);
 					//check @contract_2
 					LOG_EXPECT_TRUE("Journal", operation.data.GetSize() + filePos <= totalLength);
-					auto deleteBegin = filePos;
+					auto deleteBegin = filePos+operation.data.start;
 					auto deleteSpan = operation.data.GetSize();
 					int i = 0;
 					//lowebound
@@ -146,10 +146,12 @@ public:
 		out_totalLength = totalLength;
 		return list;
 	}
-	static shared_ptr<buffer> GetBufferFromSlices(vector<Slice> slices, int indicated_length = 0) {
+	static shared_ptr<buffer> GetBufferFromSlices(const vector<Slice> &slices, int indicated_length = 0) {
 		auto buf = make_shared<buffer>();
 		for (auto slice : slices) {
-			WriteSequence(*buf.get(), slice.data->data + slice.start, slice.GetSize());
+			LOG_EXPECT_TRUE("integrated", slice.data != nullptr);
+			if (slice.data != nullptr)
+				WriteSequence(*buf.get(), slice.data->data + slice.start, slice.GetSize());
 		}
 		return buf;
 	}
@@ -161,6 +163,29 @@ public:
 	}
 };
 
+class OperationWrapper {
+public:
+	// overwrite
+	static Operation WriteWrapper(GHObject_t const& ghobj, const string& data) {
+		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(0, FileAnchor::begin));
+	}
+	// insert a string
+	static Operation InsertWrapper(GHObject_t const& ghobj, const string& data, int pos) {
+		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(pos, FileAnchor::begin));
+	}
+	// delete all
+	static Operation DeleteWrapper(GHObject_t const& ghobj, int SpanBegin, int SpanEnd) {
+		return Operation(OperationType::Delete, Slice(nullptr, SpanBegin, SpanEnd), FilePos(0, FileAnchor::begin));
+	}
+	// delete span
+	//static Operation DeleteWrapper(GHObject_t const& ghobj, int SpanBegin, int SpanEnd) {
+	//	return Operation(OperationType::Delete, Slice(nullptr, SpanBegin, SpanEnd), FilePos(0, FileAnchor::begin));
+	//}
+	// append at end
+	static Operation AppendWrapper(GHObject_t const& ghobj, const string& data) {
+		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(0, FileAnchor::end));
+	}
+};
 class Journal {
 public:
 	string storagePath;

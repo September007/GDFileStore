@@ -36,8 +36,11 @@ inline shared_ptr<spdlog::logger> GetLogger(const string& name,
 	if (ret == nullptr) {
 		{
 			auto logfilename = fmt::format("{}/{}.log", logFileRoot, fileClass);
+			bool create_new = false;
 			ret = spdlog::synchronous_factory::create<
 				spdlog::sinks::basic_file_sink_st>(name, logfilename, false);
+			if (ret != nullptr)
+				create_new = true;
 			// if create failed, return default
 			if (!ret) {
 				// try return selfdefined first
@@ -48,6 +51,12 @@ inline shared_ptr<spdlog::logger> GetLogger(const string& name,
 				spdlog::warn("create log file[{}]failed {}:{}", logfilename, __FILE__,
 					__LINE__);
 				ret = spdlog::default_logger();
+			}
+			if (create_new) {
+				ret->info("log:{} just created", name);
+			}
+			else {
+				ret->info("creating log: {} just failed, this is default", name);
 			}
 		}
 	}
@@ -61,11 +70,11 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 	}
 }
 #pragma region assert
-#define LOG_ASSERT_TRUE(logName,condi,msg) do { if((condi)!=true) GetLogger(logName)->error(msg" expect true but get false.[{}]at {}:{}"\
+#define LOG_ASSERT_TRUE(logName,condi,msg) do { if((condi)!=true) GetLogger(logName)->error(msg" expect true but get false. [{}]at {}:{}"\
         ,#condi,__FILE__,__LINE__);}while(0)
-#define LOG_EXPECT_TRUE(logName,condi) do { if((condi)!=true) GetLogger(logName)->error("expect true but get false.[{}]at {}:{}"\
+#define LOG_EXPECT_TRUE(logName,condi) do { if((condi)!=true) GetLogger(logName)->error("expect true but get false. [{}]at {}:{}"\
         ,#condi,__FILE__,__LINE__);}while(0)
-#define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not.[{}:{}]!=[{}:{}]at {}:{}"\
+#define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not. [{}:{}]!=[{}:{}]at {}:{}"\
         ,#l,l,#r,r,__FILE__,__LINE__);}while(0)
 
 #pragma endregion
@@ -244,6 +253,7 @@ inline auto randomValue(T* beg, int len) {
 		randomValue(beg + i);
 }
 
+
 // Serialize and Unserialize
 // buffer is obligate to control data block
 class buffer {
@@ -254,6 +264,7 @@ public:
 				"buffer", "logs/buffer.log", false);
 		return _logger;
 	}
+	buffer() {}
 	using UnitType = uint8_t;
 	// using Container = vector<UnitType>;
 	// data length
@@ -301,6 +312,11 @@ public:
 		: data(data)
 		, start(start)
 		, end(end) {
+	}
+	explicit Slice(shared_ptr<buffer> data)
+		: data(data)
+		, start(0)
+		, end(data->length) {
 	}
 	Slice(const Slice&) = default;
 	bool operator==(const Slice&) const = default;
@@ -415,5 +431,16 @@ inline bool ReadArray(buffer& buf, T* t, int len) {
 		if (!Read(buf, t + i))
 			return false;
 	return true;
+}
+//construct buffer
+
+
+inline shared_ptr<buffer> BufferFrom(const char* p, int sz) {
+	shared_ptr<buffer> ret ( new buffer);
+	WriteSequence(*ret.get(), p, sz);
+	return ret;
+}
+inline shared_ptr<buffer>  BufferFrom(const string& str) {
+	return BufferFrom(str.data(), str.size());
 }
 #endif  // ASSISTANT_UTILITY_HEAD
