@@ -38,8 +38,6 @@ struct GDFSTest {
 };
  TEST(GDFS, Store_Reserve) {
 	 GDFSTest::GDFS_Store_Reserve();
-	 constexpr auto x = sizeof(void*);
-	 cout << "size of void * is " << x << endl;
  }
 TEST(GDFS, file_stat) {
 

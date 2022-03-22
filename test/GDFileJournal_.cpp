@@ -18,10 +18,10 @@ TEST(head, CombineOperationsForOneSameObject) {
 	auto s2 = Slice(nullptr, 0, 4);
 	auto s3 = GetSliceFromWriteSequence(buf, "abcd", 4);
 
-	auto o0 = Operation(OperationType::Insert, s0, FilePos(0, FileAnchor::begin));//insert 12345 at 0, 12345
-	auto o1 = Operation(OperationType::Insert, s1, FilePos(5, FileAnchor::begin));//insert 67890 at 5,1234567890
-	auto o2 = Operation(OperationType::Delete, s2, FilePos(3, FileAnchor::begin));//delete span[4] at 3, 123890
-	auto o3 = Operation(OperationType::Insert, s3, FilePos(3, FileAnchor::begin));//insert abcd at 3, 123abcd890
+	auto o0 = Operation(ghobj, OperationType::Insert, s0, FilePos(0, FileAnchor::begin));//insert 12345 at 0, 12345
+	auto o1 = Operation(ghobj, OperationType::Insert, s1, FilePos(5, FileAnchor::begin));//insert 67890 at 5,1234567890
+	auto o2 = Operation(ghobj, OperationType::Delete, s2, FilePos(3, FileAnchor::begin));//delete span[4] at 3, 123890
+	auto o3 = Operation(ghobj, OperationType::Insert, s3, FilePos(3, FileAnchor::begin));//insert abcd at 3, 123abcd890
 	vector<Operation> operations = { o0,o1,o2,o3 };
 	string expect_buffer = "123abcd890";
 
@@ -33,7 +33,7 @@ TEST(head, CombineOperationsForOneSameObject) {
 		string finalBufferstr(finalBuffer->data, finalBuffer->data + finalBuffer->length);
 		EXPECT_EQ(expect, finalBufferstr);
 	};
-		// BufferFrom and Operation Wrapper
+	// BufferFrom and Operation Wrapper
 	testOPs(operations, expect_buffer);
 	auto oo1 = OperationWrapper::WriteWrapper(ghobj, "12345");
 	auto oo2 = OperationWrapper::AppendWrapper(ghobj, "67890");

@@ -37,7 +37,7 @@ TEST(spdlog, global_access) {
     auto x=GetLogger("nonIntegrated");
     EXPECT_TRUE(x!=nullptr);
 }
-TEST(spdlog, performance_1e5) {
-    int tries = 1e5;
+TEST(spdlog, performance_1e3) {
+    int tries = 1e3;
     while (tries--)GetLogger("newLogger",true)->info("{}test{}",getTimeStr(), tries);
 }

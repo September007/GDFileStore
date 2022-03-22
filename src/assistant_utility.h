@@ -103,8 +103,7 @@ inline nlohmann::json GetSetting(const string& settingFile) {
 inline string ReadFile(const string& path) {
 	fstream in(path);
 	if (!in.good()) {
-		GetLogger("default")->error("readfile[{}] failed.{}:{}", path, __FILE__,
-			__LINE__);
+		GetLogger("default")->error("readfile[{}] failed.{}:{}", path, __FILE__,__LINE__);
 		return "";
 	}
 	string ret;
@@ -112,7 +111,6 @@ inline string ReadFile(const string& path) {
 	in.seekg(0, ios_base::end);
 	size_t length = in.tellg();
 	in.seekg(ios_base::beg);
-	// the last char on file[length-1] is '\0'
 	ret.resize(length);
 	in.read(const_cast<char*>(ret.c_str()), length);
 	// if (ret.back() == '\0')ret.pop_back();
@@ -253,7 +251,6 @@ inline auto randomValue(T* beg, int len) {
 		randomValue(beg + i);
 }
 
-
 // Serialize and Unserialize
 // buffer is obligate to control data block
 class buffer {
@@ -303,6 +300,11 @@ public:
 	~buffer() { free(data); }
 };
 
+
+// need gthis delaration
+inline shared_ptr<buffer> BufferFrom(const char* p, int sz);
+inline shared_ptr<buffer>  BufferFrom(const string& str);
+
 class Slice {
 public:
 	shared_ptr<buffer> data;
@@ -317,6 +319,8 @@ public:
 		: data(data)
 		, start(0)
 		, end(data->length) {
+	}
+	explicit Slice(const string& str) :data(BufferFrom(str)), start(0), end(str.size()) {
 	}
 	Slice(const Slice&) = default;
 	bool operator==(const Slice&) const = default;

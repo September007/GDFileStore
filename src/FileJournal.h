@@ -43,8 +43,9 @@ public:
 	GHObject_t obj;
 	// operation begin point
 	FilePos filePos;
-	Operation(OperationType operationType, Slice data, FilePos filePos)
-		: operationType(operationType)
+	Operation(const GHObject_t &ghobj,OperationType operationType, Slice data, FilePos filePos)
+		: obj(ghobj)
+		, operationType(operationType)
 		, data(data)
 		, filePos(filePos) {
 	}
@@ -167,15 +168,15 @@ class OperationWrapper {
 public:
 	// overwrite
 	static Operation WriteWrapper(GHObject_t const& ghobj, const string& data) {
-		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(0, FileAnchor::begin));
+		return Operation(ghobj , OperationType::Insert, Slice(data), FilePos(0, FileAnchor::begin));
 	}
 	// insert a string
 	static Operation InsertWrapper(GHObject_t const& ghobj, const string& data, int pos) {
-		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(pos, FileAnchor::begin));
+		return Operation(ghobj, OperationType::Insert, Slice(data), FilePos(pos, FileAnchor::begin));
 	}
 	// delete all
 	static Operation DeleteWrapper(GHObject_t const& ghobj, int SpanBegin, int SpanEnd) {
-		return Operation(OperationType::Delete, Slice(nullptr, SpanBegin, SpanEnd), FilePos(0, FileAnchor::begin));
+		return Operation(ghobj, OperationType::Delete, Slice(nullptr, SpanBegin, SpanEnd), FilePos(0, FileAnchor::begin));
 	}
 	// delete span
 	//static Operation DeleteWrapper(GHObject_t const& ghobj, int SpanBegin, int SpanEnd) {
@@ -183,7 +184,7 @@ public:
 	//}
 	// append at end
 	static Operation AppendWrapper(GHObject_t const& ghobj, const string& data) {
-		return Operation(OperationType::Insert, Slice(BufferFrom(data)), FilePos(0, FileAnchor::end));
+		return Operation(ghobj, OperationType::Insert, Slice(data), FilePos(0, FileAnchor::end));
 	}
 };
 class Journal {
