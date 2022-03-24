@@ -46,12 +46,23 @@
     },
     {
       "name": "CLANG",
+      "hidden": true,
       "cacheVariables": {
-         "CMAKE_BUILD_TYPE": "Debug",
-         "CMAKE_C_COMPILER": "clang",
-         "CMAKE_CXX_COMPILER": "clang",
-         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
- }
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    },
+    {
+      "name": "GCC",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc-11",
+        "CMAKE_CXX_COMPILER": "g++-11",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
     },
     {
       "name": "X64-Windows",
@@ -83,15 +94,15 @@
     },
     {
       "name": "X64-Linux",
-      "inherits": [ "X64", "Linux","CLANG" ],
+      "inherits": [ "X64", "Linux", "GCC" ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
           "intelliSenseMode": "linux-gcc-x64"
+        }
       }
-    }
     },
     {
       "name": "X86-Linux",
@@ -102,15 +113,15 @@
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
           "intelliSenseMode": "linux-gcc-x86"
+        }
       }
-    }
     }
   ],
   "buildPresets": [
     {
       "name": "Targets",
       "hidden": true,
-      "targets":["all_tests","GDFileJournal_","GDFileStore_","GDKeyValue_","PageGroup_","spdlog_","template_utility_","tmp"]
+      "targets": [ "all_tests", "GDFileJournal_", "GDFileStore_", "GDKeyValue_", "PageGroup_", "spdlog_", "template_utility_", "tmp" ]
     },
     {
       "name": "parallel",
@@ -130,7 +141,7 @@
     {
       "name": "X64-Linux",
       "configurePreset": "X64-Linux",
-      "inherits": [ "parallel" ,"Targets"]
+      "inherits": [ "parallel", "Targets" ]
     },
     {
       "name": "X86-Linux",
@@ -140,12 +151,16 @@
   ],
   "testPresets": [
     {
-      "name":"_TEST_",
+      "name": "_TEST_",
       "displayName": "_TEST_",
       "configurePreset": "X64-Linux",
-      "output": {"outputOnFailure": true},
-      "execution": {"noTestsAction": "error","stopOnFailure": true,"jobs": 6},
-      "filter": {"include": {"name": "*_"}}
+      "output": { "outputOnFailure": true },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true,
+        "jobs": 6
+      },
+      "filter": { "include": { "name": "*_" } }
     }
   ]
 }

@@ -77,6 +77,12 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 #define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not. [{}:{}]!=[{}:{}]at {}:{}"\
         ,#l,l,#r,r,__FILE__,__LINE__);}while(0)
 
+#define LOG_INFO(logName,msg) do { GetLogger(logName)->info(msg" at {}:{}",__FILE__,__LINE__);}while(0)
+
+#define LOG_WARN(logName,msg) do { GetLogger(logName)->warn(msg" at {}:{}",__FILE__,__LINE__);}while(0)
+
+#define LOG_ERROR(logName,msg) do { GetLogger(logName)->error("{} at {}:{}",msg,__FILE__,__LINE__);}while(0)
+
 #pragma endregion
 //Todo: json setting file
 inline nlohmann::json GetSetting(const string& settingFile) {
@@ -103,7 +109,7 @@ inline nlohmann::json GetSetting(const string& settingFile) {
 inline string ReadFile(const string& path) {
 	fstream in(path);
 	if (!in.good()) {
-		GetLogger("default")->error("readfile[{}] failed.{}:{}", path, __FILE__,__LINE__);
+		GetLogger("default")->warn("readfile[{}] failed.{}:{}", path, __FILE__,__LINE__);
 		return "";
 	}
 	string ret;
@@ -296,6 +302,11 @@ public:
 		if (sz > buffer_length) {
 			_expand_prepare(sz - buffer_length);
 		}
+	}
+	string universal_str() {
+		string ret(this->length,'\0');
+		memcpy(&ret[0], this->data, this->length);
+		return ret;
 	}
 	~buffer() { free(data); }
 };

@@ -1,0 +1,15 @@
+{
+  "object": "integrated",
+  "Journal": {
+  },
+  "RocksKV": {
+    "SerialNumberStart": 1
+  },
+  "test": {
+    "val1": "integrated.default-1",
+    "val2": "integrated.default-2",
+    "val3": "integrated.default-3",
+    "val4": "integrated.default-4",
+    "val5": "integrated.default-5"
+  }
+}

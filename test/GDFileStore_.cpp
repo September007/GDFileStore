@@ -9,7 +9,7 @@ namespace fs   =std::filesystem;
 struct GDFSTest {
 	static void GDFS_Store_Reserve() {
 		std::mt19937 rando(chrono::system_clock::now().time_since_epoch().count());
-		string  path = "/testFolder";
+		string  path = "/tmp/testFolder";
 		GDFileStore g(path);
 		vector<string> names, contents;
 		constexpr int TC = 100;

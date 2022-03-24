@@ -37,7 +37,8 @@ class RocksKV :public KVBase {
 public:
 	rocksdb::DB* db = nullptr;
 	string storagePath = "";
-	RocksKV(const string& storagePath="") :storagePath(filesystem::absolute(storagePath).string()) {}
+	//here if storagePath is empty, gcc::filesystem::absolute will cause error
+	RocksKV(const string& storagePath="/tmp/rockskv_tmp") :storagePath(filesystem::absolute(storagePath).string()) {}
 	~RocksKV() {
 		if (db) {
 			db->Close();
@@ -45,29 +46,8 @@ public:
 		}
 	}
 	//return true if load success
-	bool LoadDB()override {
-		if (KVBase::is_db_loaded)return true;
-		if (!filesystem::is_directory(storagePath))
-			filesystem::create_directories(storagePath);
-		rocksdb::Options options;
-		options.create_if_missing = true;
-		rocksdb::Status status = rocksdb::DB::Open(options, storagePath, &this->db);
-		if (!this->db)
-		{
-			GetLogger("RocksKV")->error("create RocksKV[{}] failed.{}:{}", storagePath, __FILE__, __LINE__);
-			return false;
-		}
-		else 
-			return KVBase::is_db_loaded = true;
-	}
-	bool UnLoadDB()override{
-		if (KVBase::is_db_loaded) {
-			KVBase::is_db_loaded = false;
-			this->db->Close();
-			this->db = nullptr;
-		}
-		return true;
-	} 
+	bool LoadDB()override;
+	bool UnLoadDB()override;
 	KVStatus GetValue(const key_type& key, value_type&val) override{
 		auto status = db->Get(rocksdb::ReadOptions(), key, &val);
 		return status;
@@ -102,34 +82,12 @@ public:
 			ret[i] = RemoveKey(keys[i]);
 		return ret;
 	}
-	vector<pair<key_type, value_type>> GetMatchPrefix(const string& prefix) {
-		auto it = db->NewIterator(rocksdb::ReadOptions());
-		vector<pair<key_type, value_type>> ret;
-		for (it->SeekForPrev(prefix); it->Valid(); it->Next()) {
-			if (beginWith(prefix, it->key().ToString()))
-				ret.push_back({ string(it->key().ToString()),string(it->value().ToString()) });
-		}
-		if (!it->status().ok()) {
-			std::cout << it->status().ToString();
-		}
-		//dont forget to delete it
-		delete it;
-		return ret;
-		
-	}
+	vector<pair<key_type, value_type>> GetMatchPrefix(const string& prefix);
 
 private :
-	static bool beginWith(const string& pre, const string& str) {
-		if (pre.size() > str.size())return false;
-		return str.substr(0, pre.size()) == pre;
-	}
+	static bool beginWith(const string& pre, const string& str);
 	// note slice does not hold data,it just refer,so keep original data alive
-	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs){
-		vector<rocksdb::Slice> ret(strs.size());
-		for (int i = 0; i < strs.size(); ++i)
-			ret[i] = strs[i];
-		return ret;
-	}
+	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs);
 };
 
 #endif //GDKEYVALUE_HEAD

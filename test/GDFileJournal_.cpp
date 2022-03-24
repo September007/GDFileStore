@@ -1,5 +1,5 @@
 #include<test_head.h>
-#include<FileJournal.h>
+#include<GDFileJournal.h>
 #include<gtest/gtest.h>
 #define head FileJournal
 

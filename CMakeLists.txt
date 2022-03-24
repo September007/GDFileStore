@@ -29,9 +29,7 @@ function( parse_regex_path return_set regex_path)
     set(${return_set} ${${return_set}} CACHE STRING "seems like only cache varible can stay alive out of function scope" )
 endfunction()
  
-
-# use address sanitizer
-#add_compile_options("/fsanitize=address")
+#add_compile_options(-lm)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" ON)
 
 if(ASAN_ENABLED)

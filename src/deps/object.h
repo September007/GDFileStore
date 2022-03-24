@@ -45,9 +45,9 @@ public:
 	*/
 private:
 	// genrated by Hash<string>()(oid.name)
-	[[maybe_unused]]
+	//[[maybe_unused]]
 	uint32_t hash=0;
-	[[maybe_unused]]
+	//[[maybe_unused]]
 	bool max = false;
 public:
 	// ignoring
@@ -114,3 +114,7 @@ public:
 	bool operator==(const PageGroup&)const = default;
 	bool operator < (const PageGroup&)const = default;
 };
+
+inline auto GetObjDirHashInt(GHObject_t const& ghobj) {
+	return to_string(std::hash<string>()(ghobj.hobj.oid.name));
+}
