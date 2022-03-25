@@ -44,7 +44,7 @@ endif()
 option(test_on "will build tests" ON)
 
 Project(GDFileStore)
-parse_regex_path(lib_sources "./src/GD*.cpp")
+parse_regex_path(lib_sources "./src/GD*.cpp" "./src/deps/*.cpp")
 add_library(GDFileStore ${lib_sources})
 # these definitions is for future
 add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)

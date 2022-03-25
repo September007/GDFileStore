@@ -13,6 +13,12 @@ enum class OperationType {
 	Insert,
 	Delete
 };
+// operation state  for detail see file design.vsdx
+enum class OperationState {
+	//for write
+	wrapped,inJournalQueue,inJournalCache,inFS
+	//for read
+};
 // file anchor like std::fstream::begin
 enum class FileAnchor {
 	begin = 1,
@@ -57,6 +63,7 @@ public:
 		const vector<Operation>& operations, int& out_totalLength);
 	static shared_ptr<buffer> GetBufferFromSlices(const vector<Slice>& slices, int indicated_length = 0);
 	static int GetFilePos(const Operation ope, int endPos);
+
 };
 
 class OperationWrapper {
@@ -82,6 +89,9 @@ public:
 		return Operation(ghobj, OperationType::Insert, Slice(data), FilePos(0, FileAnchor::end));
 	}
 };
+//@Todo.t2 use this!!
+// each operation have a callback
+using OperationCallBackType = std::function<void(Operation *)>;
 class Journal {
 public:
 	Journal(const string& storagePath = "") { SetPath(storagePath); }
@@ -110,15 +120,11 @@ public:
 	RocksKV* kv;
 
 private:
-	void WriteAheadLog(const Operation& wOpe);
-	void WritePrecessor(const Operation& wOpe);
 	void WriteOperation(const Operation& wOpe);
-
-	void WriteAheadLog(const vector<Operation>& wOpe);
-	void WritePrecessor(const vector<Operation>& wOpe);
 	void WriteOperation(const vector<Operation>& wOpe);
 	//combine and write
-	void _flush_WOpes();
+	void _flushProcessor();
 	// may need mutex access wOpes
 	inline void _AddWriteOperation(const Operation& wOpe);
+	inline void _AddWriteOperation(const vector<Operation>& wOpe);
 };

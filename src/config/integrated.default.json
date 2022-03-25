@@ -3,7 +3,7 @@
   "Journal": {
   },
   "RocksKV": {
-    "SerialNumberStart": 1
+    "header_count": 1
   },
   "test": {
     "val1": "integrated.default-1",

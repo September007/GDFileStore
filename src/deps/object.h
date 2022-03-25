@@ -1,6 +1,7 @@
 #pragma once 
 #include<string>
 #include<boost/functional/hash.hpp>
+#include<fmt/format.h>
 using std::string;
 class Object {
 public:
@@ -84,6 +85,8 @@ public:
 	HObject_t hobj;
 	gen_t generation;
 	shard_id_t shard_id;
+	//@new point out the owner of this obj 
+	string owner = "default-user";
 	// these implement is needed
 	GHObject_t(const HObject_t& hobj = HObject_t(), gen_t generation=0, shard_id_t shard_id=shard_id_t::NO_SHARD()) :
 		hobj(hobj), generation(generation), shard_id(shard_id) {
@@ -95,6 +98,9 @@ public:
 	bool operator==(const GHObject_t& ot)const {
 		return this->hobj.oid.name == ot.hobj.oid.name && this->hobj.pool == ot.hobj.pool;
 	}
+	// get literal description of object
+	//@Follow:GHObject_t definition
+	string GetLiteralDescription(GHObject_t const& ghobj);
 };
 struct HashForGHObject_t {
 	size_t operator()(const GHObject_t&ghobj)const{
@@ -116,5 +122,5 @@ public:
 };
 
 inline auto GetObjDirHashInt(GHObject_t const& ghobj) {
-	return to_string(std::hash<string>()(ghobj.hobj.oid.name));
+	return std::to_string(std::hash<string>()(ghobj.hobj.oid.name));
 }

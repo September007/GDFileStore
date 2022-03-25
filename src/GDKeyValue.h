@@ -7,6 +7,7 @@
 #include<map>
 #include<vector>
 #include<boost/version.hpp>
+#include<GDMutex.h>
 using std::string;
 using std::vector;
 using std::map;
@@ -90,4 +91,14 @@ private :
 	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs);
 };
 
+/* Header , simplify key's length
+* eg: usr0.obj0001.attr0: val0	usr0.obj0001.attr1: val1	usr0.obj0001.attr2: val2
+* could be k001.attr0: val0	k001.attr1: val1 k001.attr2: val2
+*/
+class Header {
+	uint32_t key;
+	explicit Header(uint32_t k) :key(k) {}
+	string to_string() { return fmt::format("h{}", key); }
+	static Header GetNewHeader(RocksKV* kv);
+};
 #endif //GDKEYVALUE_HEAD

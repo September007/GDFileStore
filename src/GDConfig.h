@@ -23,6 +23,7 @@ inline json GetConfigFromFile(const string& path) {
 * integrated.json.{name}				overload
 * {name}.default.json.{name}			overload
 * {name}.json.{name}					overload
+* but this overwrite is over simple ,on in the surface of dirct key of  name
 */
 inline auto GetConfig(const string& name, const string& key, bool reload = false) {
 	//@FATAL: change root
@@ -41,7 +42,6 @@ inline auto GetConfig(const string& name, const string& key, bool reload = false
 		cache[format("integrated.default.{}", name)] = GetConfigFromFile(format("{}/integrated.default.json", configRoot))[name];
 	}
 	if (cache[format("integrated.{}", name)].empty() || reload) {
-
 		cache[format("integrated.{}", name)] = GetConfigFromFile(format("{}/integrated.json", configRoot))[name];
 	}
 	if (cache[format("{}.default", name)].empty() || reload) {

@@ -1,4 +1,6 @@
 #include<GDKeyValue.h>
+#include<GDMutex.h>
+#include<GDConfig.h>
 using key_type = RocksKV::key_type;
 using value_type= RocksKV::value_type;
 bool RocksKV::LoadDB() {
@@ -51,4 +53,22 @@ vector<rocksdb::Slice> RocksKV::_turn_Slice(const vector<std::string>& strs) {
 	for (int i = 0; i < strs.size(); ++i)
 		ret[i] = strs[i];
 	return ret;
+}
+
+Header Header::GetNewHeader(RocksKV* kv) {
+	// modify kv::header_lock is thread mutual exclusive
+	std::lock_guard lg(GetMutex<RocksKV*>(kv,mutex_enum::header_lock));
+	string head_count;
+	auto ret = kv->GetValue("header_count", head_count);
+	if (!ret.ok()) {
+		//read config from point-outed config file
+		auto default_header_count = GetConfig("KV", "header_count").get<string>();
+		LOG_INFO("KV", fmt::format("KV[{}] missing header_count, create as[{}] at [{}:{}] "
+			, long(kv), default_header_count, __FILE__, __LINE__));
+		head_count = default_header_count;
+	}
+	auto hc = stoull(head_count);
+	head_count = std::to_string(hc + 1);
+	kv->SetValue("header_count", head_count);
+	return Header(hc);
 }

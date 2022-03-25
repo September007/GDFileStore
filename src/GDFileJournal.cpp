@@ -136,47 +136,27 @@ void Journal::SetPath(const string& path) {
 		LOG_ERROR("Journal", fmt::format("journal::setpath error [{}]", e.what()));
 	}
 }
-void Journal::SetKV(RocksKV* kv) { 
-	this->kv = kv; 
+void Journal::SetKV(RocksKV* kv) {
+	this->kv = kv;
 }
 void Journal::HandleWriteOperation(const Operation& wOpe, bool emengency) {
-	WriteAheadLog(wOpe);
 	_AddWriteOperation(wOpe);
 	if (emengency) {
-		_flush_WOpes();
+		_flushProcessor();
 	}
 }
 
-void Journal::WriteAheadLog(const Operation& wOpe) {
-
-}
-
-void Journal::WritePrecessor(const Operation& wOpe) {
-}
-
-void Journal::WriteOperation(const Operation& wOpe) {
-}
 
 void  Journal::HandleWriteOperation(const vector<Operation>& wOpe, bool emengency) {
-	WriteAheadLog(wOpe);
-	WritePrecessor(wOpe);
+	_AddWriteOperation(wOpe);
 	if (emengency) {
-		if (emengency) {
-			_flush_WOpes();
-		}
+		_flushProcessor();
 	}
 }
 
-void Journal::WriteAheadLog(const vector<Operation>& wOpe) {
-}
 
-void Journal::WritePrecessor(const vector<Operation>& wOpe) {
-}
 
-void Journal::WriteOperation(const vector<Operation>& wOpe) {
-}
-
-void Journal::_flush_WOpes() {
+void Journal::_flushProcessor() {
 	map<GHObject_t, vector<Operation>> g2os;
 	for (auto& ope : wOpes) {
 		auto& os = g2os[ope.obj];
@@ -192,10 +172,17 @@ void Journal::_flush_WOpes() {
 		auto ret = Operation::CombineOperationsForOneSameObject(v, out_length);
 		auto buf = Operation::GetBufferFromSlices(ret, out_length);
 		Write(GetObjDirHashInt(obj), buf->universal_str());
+		//@Todo : operation callback
 	}
 
 }
 
 inline void Journal::_AddWriteOperation(const Operation& wOpe) {
+	lock_guard lg(GetMutex<Journal*, string>(this, "wOpes"));
 	wOpes.push_back(wOpe);
+}
+
+inline void Journal::_AddWriteOperation(const vector<Operation>& wOpe) {
+	lock_guard lg(GetMutex<Journal*, string>(this, "wOpes"));
+	wOpes.insert(wOpes.end(), wOpe.begin(), wOpe.end());
 }
