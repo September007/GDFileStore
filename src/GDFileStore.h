@@ -1,14 +1,15 @@
 #pragma once
 #ifndef GDFILESTORE_HEAD
 #define GDFILESTORE_HEAD
-#include<deps.h>
 #include<sys/stat.h>
-#include<fmt/format.h>
 #include<fstream>
 #include<filesystem>
+#include<fmt/format.h>
 #include<spdlog/spdlog.h>
-#include<GDKeyValue.h>
+#include<httplib.h>
+#include<deps.h>
 #include<deps/object.h>
+#include<GDKeyValue.h>
 #include<GDFileJournal.h>
 //@Todo: journal
 
@@ -37,6 +38,10 @@ private:
 	string path;
 	//journal
 	Journal journal;
+	//public member
+public:
+	//@new , count on this to get a specified configuration from  a bunch of files at [/src/config]
+	string fsname="default_fs";
 
 public:
 
@@ -101,6 +106,10 @@ public:
 	/*
 	* Storage Path Management
 	*/
+	//config file path
+	string GetConfigName() {
+		return fmt::format("fs_{}", this->fsname);
+	}
 	//kv root
 	string GetKVRoot()const {
 		return fmt::format("{}/KV", this->path);

@@ -1,0 +1,6 @@
+{
+  "http_server": {
+    "addr": "localhost",
+    "port":8080
+  }
+}

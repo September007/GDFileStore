@@ -1,6 +1,7 @@
 {
   "object": "integrated",
   "Journal": {
+    "flushIntreval": "1.0"
   },
   "RocksKV": {
     "header_count": 1

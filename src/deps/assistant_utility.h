@@ -260,14 +260,9 @@ inline auto randomValue(T* beg, int len) {
 // Serialize and Unserialize
 // buffer is obligate to control data block
 class buffer {
-public:
-	static auto static_logger() {
-		static auto _logger =
-			spdlog::synchronous_factory::create<spdlog::sinks::basic_file_sink_st>(
-				"buffer", "logs/buffer.log", false);
-		return _logger;
-	}
+public: 
 	buffer() {}
+	buffer(const string& s);
 	using UnitType = uint8_t;
 	// using Container = vector<UnitType>;
 	// data length
@@ -280,23 +275,7 @@ public:
 	UnitType* data = nullptr;
 	//
 	static constexpr double incre_factor = 1.5;
-	 bool _expand_prepare(int addtionalLength) {
-		if (addtionalLength + length > buffer_length)
-			try {
-			auto newBufferLength = (addtionalLength + length) * incre_factor;
-			auto new_data = (UnitType*)malloc(
-				sizeof(UnitType) * newBufferLength);  // UnitType[newBufferLength];
-			memcpy(new_data, data, length);
-			buffer_length = newBufferLength;
-			free(data);
-			data = new_data;
-		}
-		catch (std::exception&msg) {
-			GetLogger("buffer", false)->error("{} at {}:{},", __FUNCTION__, __FILE__, __LINE__, msg.what());
-			return false;
-		}
-		return true;
-	}
+	bool _expand_prepare(int addtionalLength);
 	//only when sz > buffer_length, trigger a buffer expand
 	void _Reserve(int sz) {
 		if (sz > buffer_length) {
@@ -309,6 +288,10 @@ public:
 		return ret;
 	}
 	~buffer() { free(data); }
+	//serialize 
+	//@Contract_1 read and write as a char *
+	static bool Read(buffer& buf, buffer* rbuf);
+	static void Write(buffer& buf, buffer* wbuf);
 };
 
 
@@ -342,6 +325,9 @@ public:
 		else
 			return Slice(data, this->start + _start, this->end);
 	}
+	// support for serilize
+	static bool Read(buffer& buf, Slice* sli);
+	static void Write(buffer& buf, Slice* s);
 };
 // different from WriteArray,this requre T is arithmetic type
 template <typename T>
@@ -366,7 +352,7 @@ inline void Write(buffer& buf, T* t) {
 		Write(buf, &sz);
 		WriteSequence(buf, t->c_str(), t->length() * sizeof(char));
 	}
-	else if constexpr (requires(T t) { T::Write(declval<buffer&>(), &t); }) {
+	else if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); }) {
 		T::Write(buf, t);
 	}
 	else if constexpr (requires(T t) { t.Write(declval<buffer&>()); }) {
@@ -458,4 +444,5 @@ inline shared_ptr<buffer> BufferFrom(const char* p, int sz) {
 inline shared_ptr<buffer>  BufferFrom(const string& str) {
 	return BufferFrom(str.data(), str.size());
 }
+
 #endif  // ASSISTANT_UTILITY_HEAD

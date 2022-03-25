@@ -1,6 +1,6 @@
 #include<GDKeyValue.h>
 #include<GDMutex.h>
-#include<GDConfig.h>
+#include<Config.h>
 using key_type = RocksKV::key_type;
 using value_type= RocksKV::value_type;
 bool RocksKV::LoadDB() {

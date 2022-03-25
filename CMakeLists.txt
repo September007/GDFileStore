@@ -31,15 +31,15 @@ endfunction()
  
 #add_compile_options(-lm)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" ON)
-
-if(ASAN_ENABLED)
-  if(MSVC)
-    add_compile_options( /fsanitize=address )
-  else()
-    add_compile_options(-fsanitize=address )
-    add_link_options( -fsanitize=address)
-  endif()
-endif()
+## disable this
+#if(ASAN_ENABLED)
+#  if(MSVC)
+#    add_compile_options( /fsanitize=address )
+#  else()
+#    add_compile_options(-fsanitize=address )
+#    add_link_options( -fsanitize=address)
+#  endif()
+#endif()
 
 option(test_on "will build tests" ON)
 
@@ -55,13 +55,14 @@ find_package(GTest CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED) 
 find_package(RocksDB CONFIG REQUIRED) 
+find_package(rpclib CONFIG REQUIRED)
 # head only
 find_package(nlohmann_json CONFIG REQUIRED)
 
 #target_link_libraries(main PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 set (dependencis 
             PUBLIC  GTest::gtest 
-            PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb)
+            PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb rpclib::rpc)
 if(test_on)
 #
     add_compile_definitions(TEST_ON)
