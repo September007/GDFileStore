@@ -11,6 +11,7 @@
 #include<deps/object.h>
 #include<GDKeyValue.h>
 #include<GDFileJournal.h>
+#include <deps/connection.h>
 //@Todo: journal
 
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
@@ -41,11 +42,11 @@ private:
 	//public member
 public:
 	//@new , count on this to get a specified configuration from  a bunch of files at [/src/config]
-	string fsname="default_fs";
+	string fsname;// = "default_fs";
 
 public:
 
-	explicit GDFileStore(const string& StorePath);
+	explicit GDFileStore(const string& StorePath,const string &fsName="default_fs");
 	GDFileStore(const GDFileStore&) = delete;
 	GDFileStore(GDFileStore&&) = delete;
 	//attributes interface for GET 
@@ -63,7 +64,12 @@ public:
 	auto UnMount() {
 		return kv.UnLoadDB();
 	}
-
+	//@new 22-3-25
+	bool HandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
+	// obligated to call followers 
+	bool PrimaryHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
+	//just do own job
+	bool ReplicaHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
 private:
 	//internal interface for object data
 	//file suffix is .txt
@@ -95,7 +101,6 @@ private:
 		return 	WriteFile(objDir, data, true);
 	}
 	//@Todo: transaction
-	//@Todo: ops
 public:
 	/*
 	 * the projection from Object to PageGroup, here just  defining as a simple linear mod after hash
@@ -106,10 +111,6 @@ public:
 	/*
 	* Storage Path Management
 	*/
-	//config file path
-	string GetConfigName() {
-		return fmt::format("fs_{}", this->fsname);
-	}
 	//kv root
 	string GetKVRoot()const {
 		return fmt::format("{}/KV", this->path);
@@ -128,6 +129,11 @@ public:
 	}
 	//obj path
 	string GetGHObjectStoragePath(const GHObject_t& ghobj) const;
+	
+	/*
+	* something new
+	*/
+	string GetOsdName() { return this->fsname; };
 };
 
 #endif //GDFILESTORE_HEAD

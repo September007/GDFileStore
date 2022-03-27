@@ -1,5 +1,5 @@
 #include<test_head.h>
-#include<Config.h>
+#include<config.h>
 using namespace std;
 
 TEST(config, all) {

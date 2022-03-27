@@ -4,6 +4,8 @@
 //#include<data.h>
 constexpr auto tries = 100;
 #define head assistant_utility
+
+
 TEST(assistant_utility, SpreadCall) {
 	vector<int> params = { 1,2,3,4,5,5,6,6,6,3,6,3,7,7,7,77,7,3,7 };
 	auto ret0 = 0, ret1 = 0, ret2 = 0;
@@ -80,6 +82,23 @@ auto TestOneKindOfType(buffer& buf) {
 	delete[]datas, delete[]read_datas;
 	return ret;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class _clsWithStaticInterface {
 public:
 	int i;
@@ -157,15 +176,6 @@ TEST(assistant_utility, serialize) {
 
 }
 
-TEST(file, read) {
-	string	path("./testout.txt");
-	ofstream out(path);
-	char str[10] = { 'a','b','c','\0','e','f','h','8','9','\0'};
-	for (auto c : str)
-		out << c;
-	out.close();
-	auto read = ReadFile(path);
-	EXPECT_EQ(read.size(), 10);
-	for (int i = 0; i < 10; ++i)
-		EXPECT_EQ(read[i], str[i]);
-}
+
+
+TEST()

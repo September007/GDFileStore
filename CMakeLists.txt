@@ -49,6 +49,7 @@ add_library(GDFileStore ${lib_sources})
 # these definitions is for future
 add_compile_definitions(GDVERSION=1 LOCAL_VERSION=1 MIGRATED_VERSION=2)
 include_directories( ./test ./src ./src/deps "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
+message("add include vcpkg dirs for intelli: $ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
 # import gtest for test
 find_package(GTest CONFIG REQUIRED)
 # find_package(Boost REQUIRED  ) replace boost::format with fmt

@@ -1,6 +1,6 @@
 #include<GDFileJournal.h>
 #include<map>
-#include<Config.h>
+#include<config.h>
 
 void Journal::Init(const string& path, RocksKV* kv) {
 	SetPath(path);

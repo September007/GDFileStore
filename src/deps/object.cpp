@@ -128,8 +128,16 @@ int Operation::GetFilePos(const Operation ope, int endPos) {
 }
 
 bool Operation::Read(buffer& buf, Operation* ope) {
-	return false;
+	::Read(buf, &ope->operationType);
+	::Read(buf, &ope->data);
+	::Read(buf, &ope->obj);
+	::Read(buf, &ope->filePos);
+	return true;
 }
 
 void Operation::Write(buffer& buf, Operation* ope) {
+	::Write(buf, &ope->operationType);
+	::Write(buf, &ope->data);
+	::Write(buf, &ope->obj);
+	::Write(buf, &ope->filePos);
 }

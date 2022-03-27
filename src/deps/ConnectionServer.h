@@ -8,7 +8,7 @@
 #include<object.h>
 #include<thread>
 #include<GDFileStore.h>
-#include<Config.h>
+#include<config.h>
 using std::vector;
 using namespace httplib;
 /* use http for now

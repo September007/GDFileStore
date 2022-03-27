@@ -40,7 +40,8 @@
           "hostOS": "Linux"
         },
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": "Linux"
+          "hostOS": "Linux",
+          "intelliSenseMode": "linux-gcc-x64"
         }
       }
     },
@@ -126,7 +127,7 @@
     {
       "name": "parallel",
       "hidden": true,
-      "jobs": 6
+      "jobs": 8
     },
     {
       "name": "X64-Windows",

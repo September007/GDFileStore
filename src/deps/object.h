@@ -33,7 +33,7 @@ public:
 };
 //
 class Object_t {
-public :
+public:
 	string name;
 };
 //hash object
@@ -42,14 +42,14 @@ class HObject_t {
 public:
 	Object_t oid;
 	Snapid_t snap;
-	HObject_t(Object_t oid=Object_t(), Snapid_t snap=Snapid_t()) :oid(oid) {}
+	HObject_t(Object_t oid = Object_t(), Snapid_t snap = Snapid_t()) :oid(oid) {}
 	/*
 	*  don't wanna use these
 	*/
 private:
 	// genrated by Hash<string>()(oid.name)
 	//[[maybe_unused]]
-	uint32_t hash=0;
+	uint32_t hash = 0;
 	//[[maybe_unused]]
 	bool max = false;
 public:
@@ -90,7 +90,7 @@ public:
 	//@new point out the owner of this obj 
 	string owner = "default-user";
 	// these implement is needed
-	GHObject_t(const HObject_t& hobj = HObject_t(), gen_t generation=0, shard_id_t shard_id=shard_id_t::NO_SHARD()) :
+	GHObject_t(const HObject_t& hobj = HObject_t(), gen_t generation = 0, shard_id_t shard_id = shard_id_t::NO_SHARD()) :
 		hobj(hobj), generation(generation), shard_id(shard_id) {
 	}
 	bool operator<(const GHObject_t ot)const {
@@ -103,9 +103,17 @@ public:
 	// get literal description of object
 	//@Follow:GHObject_t definition
 	string GetLiteralDescription(GHObject_t const& ghobj);
+	static void Read(buffer& buf, GHObject_t* ghobj) {
+		::Read(buf, &ghobj->hobj.oid.name);
+		::Read(buf, &ghobj->generation);
+	}
+	static void Write(buffer& buf, GHObject_t* ghobj) {
+		::Write(buf, &ghobj->hobj.oid.name);
+		::Write(buf, &ghobj->generation);
+	}
 };
 struct HashForGHObject_t {
-	size_t operator()(const GHObject_t&ghobj)const{
+	size_t operator()(const GHObject_t& ghobj)const {
 		size_t seed = 0;
 		boost::hash_combine(seed, ghobj.hobj.oid.name);
 		boost::hash_combine(seed, ghobj.hobj.pool);
@@ -117,7 +125,7 @@ class PageGroup {
 public:
 	string name;
 	uint64_t pool = HObject_t::POOL_META;
-	PageGroup(const string& name = "",uint64_t _pool=1) :name(name),pool(_pool) {}
+	PageGroup(const string& name = "", uint64_t _pool = 1) :name(name), pool(_pool) {}
 	PageGroup(const string&& name) :name(name) {}
 	bool operator==(const PageGroup&)const = default;
 	bool operator < (const PageGroup&)const = default;
@@ -133,6 +141,27 @@ enum class OperationType {
 	Insert,
 	Delete
 };
+template<>
+inline void Write(buffer& buf, OperationType* opet) {
+	int i = int(*opet);
+	::Write(buf, &i);
+}
+template<>
+inline bool Read(buffer& buf, OperationType* opet) {
+	int i;
+	::Read(buf, &i);
+	switch (i) {
+		case int(OperationType::Insert) :
+			*opet = OperationType::Insert;
+			break;
+		case int(OperationType::Delete) :
+			*opet = OperationType::Delete;
+			break;
+		default:
+			LOG_ERROR("serialize", "error convert");
+	}
+	return true;
+}
 // operation state  for detail see file design.vsdx
 enum class OperationState {
 	//for write
@@ -155,6 +184,19 @@ public:
 	}
 	FilePos(const FilePos&) = default;
 	bool operator==(const FilePos&) const = default;
+	static bool Read(buffer& buf, FilePos* fp) {
+		int i;
+		::Read(buf, &i);
+		::Read(buf, &fp->offset);
+		fp->fileAnchor = (i == int(FileAnchor::begin)) ? FileAnchor::begin : FileAnchor::end;
+		return true;
+	}
+	static void Write(buffer& buf, FilePos* fp) {
+		auto i = int(fp->fileAnchor);
+		::Write(buf,&i);
+		::Write(buf, &fp->offset);
+
+	}
 };
 class Operation {
 public:

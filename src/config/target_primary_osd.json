@@ -1,0 +1,7 @@
+{
+  "help": "this is for test/http_connection",
+  "http_server": {
+    "addr": "127.0.0.1",
+    "port": 8080
+  }
+}
