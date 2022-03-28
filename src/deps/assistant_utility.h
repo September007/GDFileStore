@@ -86,16 +86,21 @@ SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
 		},
 		vs, forward<RestParams>(restParams)...);
 }
-
+// suppose pointer t don't need call destruction
 template<typename T>
 void randomValue(T* t, int len = 1) {
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
+	using DT = decay_t<T>;
 	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
 		for (int i = 0; i < len; ++i)
 			*(uint8_t*)(t+i) = (rando() % (UINT8_MAX + 1));
 	}
-	else if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+	else if constexpr (is_integral_v<T> || is_enum_v<T>) {
 		randomValue<uint8_t>(const_cast<uint8_t*>( reinterpret_cast<const uint8_t*>(t)), len * sizeof(T) / sizeof(uint8_t));
+	}
+	else if constexpr (is_floating_point_v<T>) {
+		static  uniform_real_distribution<DT> urd(numeric_limits<DT>::min(), numeric_limits<DT>::max());
+		*const_cast<DT*>(t) = urd(rando);
 	}
 	else if constexpr (is_same_v<string, decay_t<T>>) {
 		for (int i = 0; i < len; ++i) {
@@ -223,7 +228,8 @@ void Write(buffer& buf, T* t) {
 		Write(buf, &rest);
 	}
 	else if constexpr (is_same_v<T,T>) {
-	//	static_assert(!is_same_v<T, T>,"can't found suited imple of write");
+		//static_assert(!is_same_v<T, T>,"can't found suited imple of write");
+		LOG_ERROR("integrated", "can't found suited imple of write");
 	}
 }
 

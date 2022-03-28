@@ -15,6 +15,7 @@ public:
 	string name;
 	string connection_str;
 	InfoForOSD(const string& name="", const string& conn_str="") :name(name), connection_str(conn_str) {}
+	bool operator==(const InfoForOSD& ifs)const { return name == ifs.name && connection_str == ifs.connection_str; }
 	auto GetES() { return make_tuple(&name, &connection_str); }
 };
 

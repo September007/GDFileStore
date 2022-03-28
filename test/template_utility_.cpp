@@ -95,6 +95,7 @@ auto TestOneKindOfType(buffer& buf) {
 		}
 	}
 	delete[]datas, delete[]read_datas;
+	constexpr auto x= numeric_limits<double>::max();
 	return ret;
 }
 
@@ -119,7 +120,7 @@ public:
 	int i;
 	float f;
 	string s;
-	bool operator==(const _clsWithStaticInterface&) const= default;
+	bool operator==(const _clsWithStaticInterface& ot) const { return i == ot.i && f == ot.f && s == ot.s; };
 	auto GetES() { return make_tuple(&i, &f, &s); }
 };
 class _clsWithMemberInterface {
@@ -127,7 +128,7 @@ public:
 	int i;
 	float f;
 	string s;
-	bool operator==(const _clsWithMemberInterface&) const = default;
+	bool operator==(const _clsWithMemberInterface& ot) const { return i == ot.i && f == ot.f && s == ot.s; };
 	auto GetES() { return make_tuple(&i, &f, &s); }
 };
 TEST(assistant_utility, serialize) {
@@ -141,6 +142,11 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(TestOneKindOfType<int16_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<int32_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<int64_t>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<float>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<double>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<long double>(buf), 0);
+
+
 	EXPECT_EQ(TestOneKindOfType<string>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<_clsWithMemberInterface>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<_clsWithStaticInterface>(buf), 0);
@@ -161,4 +167,10 @@ TEST(assistant_utility, serialize_object_class) {
 	EXPECT_EQ(TestOneKindOfType<OperationState>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<PageGroup>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<Snapid_t>(buf), 0);
+}
+#include<connection.h>
+TEST(assistant_utility, serialize_rest) {
+	buffer buf;
+	EXPECT_EQ(TestOneKindOfType<InfoForOSD>(buf), 0);
+	
 }
