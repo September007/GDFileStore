@@ -103,8 +103,8 @@ vector<Slice> Operation::CombineOperationsForOneSameObject
 }
 
 vector<Slice> Operation::CombineOperationsForOneSameObject(shared_ptr<buffer> objData, const vector<Operation>& operations, int& out_totalLength) {
-	objData->length;
-	(objData, 0, objData->length);
+	//objData->data.length();
+	//(objData, 0, objData->data.length());
 	auto originData = OperationWrapper::WriteWrapper(operations[0].obj, objData->universal_str());
 	auto new_operations = vector<Operation>{ originData };
 	new_operations.insert(new_operations.end(), operations.begin(), operations.end());
@@ -116,7 +116,7 @@ shared_ptr<buffer> Operation::GetBufferFromSlices(const vector<Slice>& slices, i
 	for (auto slice : slices) {
 		LOG_EXPECT_TRUE("integrated", slice.data != nullptr);
 		if (slice.data != nullptr)
-			WriteSequence(*buf.get(), slice.data->data + slice.start, slice.GetSize());
+			WriteSequence(*buf.get(), slice.data->data.c_str() + slice.start, slice.GetSize());
 	}
 	return buf;
 }
@@ -125,19 +125,4 @@ int Operation::GetFilePos(const Operation ope, int endPos) {
 		return ope.filePos.offset;
 	else
 		return ope.filePos.offset + endPos;
-}
-
-bool Operation::Read(buffer& buf, Operation* ope) {
-	::Read(buf, &ope->operationType);
-	::Read(buf, &ope->data);
-	::Read(buf, &ope->obj);
-	::Read(buf, &ope->filePos);
-	return true;
-}
-
-void Operation::Write(buffer& buf, Operation* ope) {
-	::Write(buf, &ope->operationType);
-	::Write(buf, &ope->data);
-	::Write(buf, &ope->obj);
-	::Write(buf, &ope->filePos);
 }

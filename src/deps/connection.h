@@ -14,16 +14,8 @@ class InfoForOSD {
 public:
 	string name;
 	string connection_str;
-	InfoForOSD(const string& name, const string& conn_str) :name(name), connection_str(conn_str) {}
-	static bool Read(buffer& buf,const InfoForOSD* inf) {
-		::Read(buf, &inf->name);
-		::Read(buf, &inf->connection_str);
-		return true;
-	}
-	static void Write(buffer& buf, const  InfoForOSD* inf) {
-		::Write(buf, &inf->name);
-		::Write(buf, &inf->connection_str);
-	}
+	InfoForOSD(const string& name="", const string& conn_str="") :name(name), connection_str(conn_str) {}
+	auto GetES() { return make_tuple(&name, &connection_str); }
 };
 
 #endif 

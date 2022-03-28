@@ -41,6 +41,7 @@ auto GDFileStore::_WriteJournal(GHObject_t obj, const string& content) {
 	}
 	//value set empty
 	kv.SetValue("journal::write_" + GetGHObjectStoragePath(obj), objDirHashInt);
+	return true;
 };
 auto GDFileStore::flushWriteJournal() {
 	auto allWriteJournal = kv.GetMatchPrefix("journal::write_");

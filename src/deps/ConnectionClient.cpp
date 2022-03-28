@@ -1,3 +1,4 @@
+#include<connection.h>
 #include<ConnectionClient.h>
 
 ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
@@ -12,9 +13,9 @@ ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 	// code for params
 	Write<Operation>(buf, &ope);
 	Write(buf, &osd_cnt);
-	//WriteArray(buf, &osds[0], osds.size());
-	for (int i = 0; i < osd_cnt; ++i)
-		Write(buf, &osds[i]);
+	WriteArray(buf, &osds[0], osds.size());
+	//for (int i = 0; i < osd_cnt; ++i)
+	//	Write(buf, &osds[i]);
 	Write(buf, &reloadConnection);
 	auto str = buf.universal_str();
 	auto str_len = str.size();

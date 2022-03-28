@@ -110,16 +110,7 @@ public:
 		::Write(buf, &cls->f);
 		::Write(buf, &cls->s);
 	}
-	static bool Read(buffer& buf, _clsWithStaticInterface *cls) {
-		return ::Read(buf, &cls->i) &&
-			   ::Read(buf, &cls->f) &&
-			   ::Read(buf, &cls->s);
-	}
-	void randomValue() {
-		::randomValue(&this->i);
-		::randomValue(&this->f);
-		::randomValue(&this->s);
-	}
+	auto GetES() { return make_tuple(&i, &f, &s); }
 };
 class _clsWithMemberInterface {
 public:
@@ -127,16 +118,7 @@ public:
 	float f;
 	string s;
 	bool operator==(const _clsWithMemberInterface&) const = default;
-	void Write(buffer& buf) {
-		::Write(buf, &this->i);
-		::Write(buf, &this->f);
-		::Write(buf, &this->s);
-	}
-	bool Read(buffer& buf) {
-		return ::Read(buf, &this->i) &&
-			   ::Read(buf, &this->f) &&
-			   ::Read(buf, &this->s);
-	}
+	auto GetES() { return make_tuple(&i, &f, &s); }
 	void randomValue() {
 		::randomValue(&this->i);
 		::randomValue(&this->f);
@@ -175,7 +157,3 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(_mcls, r_mcls);
 
 }
-
-
-
-TEST()

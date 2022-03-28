@@ -22,6 +22,10 @@
 #include <vector>
 #include<memory>
 using namespace std;
+template<typename T>
+constexpr bool is_tuple = false;
+template<typename ...args>
+constexpr bool is_tuple<tuple<args...>> = true;
 
 shared_ptr<spdlog::logger> GetLogger(const string& name,
 	const bool force_isolate = false, const string& fileClass = "integrated");
@@ -86,95 +90,58 @@ SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
 		vs, forward<RestParams>(restParams)...);
 }
 
-template <typename T>
-inline auto randomValue(T* des) {
-	using DT = decay_t<T>;
-	static mt19937_64 rando(
-		chrono::system_clock::now().time_since_epoch().count());
-	if constexpr (std::is_arithmetic_v<T>) {
-		for (int i = 0; i < int(sizeof(DT)); ++i) {
-			auto rando_result = (rando() % 255) + 1;
-			*(reinterpret_cast<unsigned char*>(des)) = rando_result;
-		}
+template<typename T>
+void randomValue(T* t, int len = 1) {
+	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
+	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
+		for (int i = 0; i < len; ++i)
+			*(uint8_t*)(t) = (rando() % (UINT8_MAX + 1));
 	}
-	else if constexpr (is_same_v<decay_t<T>, std::string>) {
-		constexpr int len = 1000;
-		static char buffer[len];
-		static mt19937_64 rando(
-			chrono::system_clock::now().time_since_epoch().count());
-		const int strlen = (rando() % sizeof(buffer));
-		for (int i = 0; i < strlen; ++i)
-			buffer[i] = (rando() % ('z' - '0' + 1)) + '0';
-		buffer[strlen] = '0';
-		new (des) string(buffer);
+	else if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+		randomValue<uint8_t>(const_cast<uint8_t*>( reinterpret_cast<const uint8_t*>(t)), len * sizeof(T) / sizeof(uint8_t));
 	}
-	else if constexpr (requires(T t) { T::randomValue(&t); }) {
-		T::randomValue(des);
+	else if constexpr (is_same_v<string, decay_t<T>>) {
+		int slen = rando() % 100 + 1;
+		new(t)string(slen,'0');
+		randomValue<uint8_t>(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(t->data())), slen);
 	}
-	else if constexpr (requires(T t) { t.randomValue(); }) {
-		des->randomValue();
+	else if constexpr (requires(T _t) { _t.GetES(); }) {
+		auto es = t->GetES();
+		randomValue(&es);
 	}
-	else {
-		// directly write down static_assert(false) would result in compile bug(or
-		// not?) use is_same_v<T,T> to postphone analyse until specialization
-		static_assert(!is_same_v<T, T>);
+	else if constexpr (is_same_v<T, tuple<>>) {}
+	else if constexpr (is_tuple<T>) {
+		auto rest = t->_Get_rest();
+		randomValue(t->_Myfirst._Val);
+		randomValue(&rest);
+	}
+	else if constexpr (is_same_v<T, T>) {
+		static_assert(!is_same_v<T, T>, "can't found suited imple,plz make it");
 	}
 }
-// this interface seems to be irregular
-template <typename T>
-	requires is_arithmetic_v<T>
-inline auto randomValue() {
-	using DT = decay_t<T>;
-	DT ret;
-	static mt19937_64 rando(
-		chrono::system_clock::now().time_since_epoch().count());
-	for (int i = 0; i < int(sizeof(DT)); ++i)
-		*(reinterpret_cast<unsigned char*>(&ret)) = (rando() % 255) + 1;
-	return ret;
+template<typename T>
+auto randomValue() {
+	uint8_t buf[sizeof(T)];
+	randomValue<T>(reinterpret_cast<T*>(buf), 1);
+	return move(*reinterpret_cast<T*>(buf));
 }
-template <typename T>
-inline auto randomValue(T* beg, int len) {
-	for (int i = 0; i < len; ++i)
-		randomValue(beg + i);
-}
-
 // Serialize and Unserialize
 // buffer is obligate to control data block
-class buffer {
-public: 
-	buffer() {}
-	buffer(const string& s);
-	using UnitType = uint8_t;
-	// using Container = vector<UnitType>;
-	// data length
-	int length = 0;
-	// offset for read
+struct buffer {
+public:
+	string data;
 	int offset = 0;
-	// buffer length
-	int buffer_length = 0;
-	// data
-	UnitType* data = nullptr;
-	//
-	static constexpr double incre_factor = 1.5;
-	bool _expand_prepare(int addtionalLength);
-	//only when sz > buffer_length, trigger a buffer expand
-	void _Reserve(int sz) {
-		if (sz > buffer_length) {
-			_expand_prepare(sz - buffer_length);
-		}
+	void append(int len, const void* src) {
+		data.append(len, '\0');
+		memcpy(data.data() + data.size() - len, src, len);
 	}
-	string universal_str() {
-		string ret(this->length,'\0');
-		memcpy(&ret[0], this->data, this->length);
-		return ret;
+	void drawback(int len, void* des) {
+		memcpy(des, data.data() + offset, len);
+		offset += len;
 	}
-	~buffer() { free(data); }
-	//serialize 
-	//@Contract_1 read and write as a char *
-	static bool Read(buffer& buf, buffer* rbuf);
-	static void Write(buffer& buf, buffer* wbuf);
+	string universal_str() { return data; }
+	auto GetES() { return make_tuple(&data, &offset); }
 };
-
 
 // need gthis delaration
 inline shared_ptr<buffer> BufferFrom(const char* p, int sz);
@@ -193,7 +160,7 @@ public:
 	explicit Slice(shared_ptr<buffer> data)
 		: data(data)
 		, start(0)
-		, end(data->length) {
+		, end(data->data.length()) {
 	}
 	explicit Slice(const string& str);
 	Slice(const Slice&) = default;
@@ -206,135 +173,131 @@ public:
 			return Slice(data, this->start + _start, this->end);
 	}
 	// support for serilize
-	static bool Read(buffer& buf, Slice* sli);
+	static void Read(buffer& buf, Slice* sli);
 	static void Write(buffer& buf, Slice* s);
+	auto GetES() { return make_tuple(&start, &end); }
 };
-// different from WriteArray,this requre T is arithmetic type
-template <typename T>
-	requires is_arithmetic_v<T>
-inline void WriteSequence(buffer& buf, T* t, int len) {
-	buf._expand_prepare(sizeof(T) * len);
-	memcpy(buf.data + buf.length, t, sizeof(T) * len);
-	buf.length += sizeof(T) * len;
-}
-// call for atithmetic,string and class with static or member Write(static
-// first)
-template <typename T = int>
-inline void Write(buffer& buf, T* t) {
-	constexpr auto TLENGTH = sizeof(T);
-	if constexpr (is_arithmetic_v<T>) {
-		buf._expand_prepare(TLENGTH);
-		memcpy(buf.data + buf.length, reinterpret_cast<void*>(t), TLENGTH);
-		buf.length += TLENGTH;
+
+template< typename T>
+void Write(buffer& buf, T* t);
+template<typename T>
+void Read(buffer& buf, T* t);
+template<typename T>
+decay_t<T> Read(buffer& buf);
+
+template< typename T>
+void Write(buffer& buf, T* t) {
+	constexpr int TLEN = sizeof(T);
+	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+		buf.append(TLEN, (void*)t);
 	}
-	else if constexpr (is_same_v<decay_t<T>, std::string>) {
-		int sz = t->length();
-		Write(buf, &sz);
-		WriteSequence(buf, t->c_str(), t->length() * sizeof(char));
+	else if constexpr (is_same_v<string, decay_t<T>>) {
+		int len = t->length();
+		buf.append(sizeof(int), &len);
+		buf.append(len * sizeof(char), t->data());
 	}
-	else if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); }) {
-		T::Write(buf, t);
+	else if constexpr (requires(T _t) { _t.GetES(); }) {
+		auto es = t->GetES();
+		Write(buf, &es);
+		// more action ,may for shared_ptr<T> balabalah
+		if constexpr (requires(T t) { T::Write(declval<buffer&>(), &t); T::Read(declval<buffer&>(), &t); }) {
+			T::Write(buf, t);
+		}
 	}
-	else if constexpr (requires(T t) { t.Write(declval<buffer&>()); }) {
-		t->Write(buf);
+	else if constexpr (is_same_v<decay_t<T>, tuple<>>) return;
+	else if constexpr (is_tuple<decay_t<T>>) {
+		Write(buf, t->_Myfirst._Val);
+		auto rest = t->_Get_rest();
+		Write(buf, &rest);
 	}
-	else if constexpr (is_same_v<T, Slice>) {
-		int length = t->GetSize();
-		Write(buf, &length);
-		buf._expand_prepare(length);
-		memcpy(buf.data + buf.length, t->data.data[t->start], length);
-		buf.length += length;
-	}
-	else {
-		static_assert(!is_same_v<T, T>);
+	else if constexpr (is_same_v<T,T>) {
+	//	static_assert(!is_same_v<T, T>,"can't found suited imple of write");
 	}
 }
 
-template <typename T>
-inline void WriteArray(buffer& buf, T* t, int len) {
-	for (int i = 0; i < len; ++i)
-		Write<T>(buf, t + i);
-}
-// return true if success
-template <typename T>
-	requires is_arithmetic_v<T>
-inline bool ReadSequence(buffer& buf, T* t, int len) {
-	constexpr auto TLENGTH = sizeof(T);
-	if (buf.offset + TLENGTH * len > buf.length)
-		return false;
-	if constexpr (is_same_v<T, char>)
-		memcpy(t, buf.data + buf.offset, TLENGTH * len);
-	else {
-		auto cast_t = (void*)(t);
-		memcpy(cast_t, buf.data + buf.offset, TLENGTH * len);
+template<typename T>
+decay_t<T> Read(buffer& buf) {
+	constexpr int TLEN = sizeof(T);
+	using DT = decay_t<T>;
+	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+		char _inside_buf[TLEN];
+		buf.drawback(TLEN, _inside_buf);
+		return *reinterpret_cast<DT*>(_inside_buf);
 	}
+	else if constexpr (is_same_v<DT, string>) {
+		auto len = Read<int>(buf);
+		string ret(len);
+		buf.drawback(len, ret.data());
+		return ret;
+	}
+	else if constexpr (requires(T _t) { _t.GetES(); }) {
+		char _inside_buf[TLEN];
+		DT* reinterpreted = reinterpret_cast<DT*>(_inside_buf);
+		//call fill
+		Read(buf, reinterpreted);
+		// more action ,may for shared_ptr<T> balabalah
+		if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); T::Read(declval<buffer&>(), &_t); }) {
+			T::Read(buf, reinterpreted);
+		}
+		return move(*reinterpreted);
+	}
+	else if constexpr (is_same_v<T, T>) {
+		static_assert(!is_same_v<T, T>, "can't found right imple");
+	}
+}
 
-	buf.offset += TLENGTH * len;
-	return true;
-}
-class InfoForOSD;
-// return true if success
-// call for arithmetic,string,and class with static or member Read(static first)
-template <typename T>
-inline bool Read(buffer& buf, T* t) {
-	if constexpr (is_arithmetic_v<T>) {
-		ReadSequence(buf, t, 1);
-	}
-	else if constexpr (is_same_v<decay_t<T>, std::string>) {
-		int sz = 0;
-		ReadSequence(buf, &sz, 1);
-		string str(sz, '0');
-		ReadSequence(buf, str.c_str(), sz);
-		const_cast<string*>(t)->swap(str);
-	}
-	else if constexpr (requires(T t) { T::Read(declval<buffer&>(), &t); }) {
-		T::Read(buf, t);
-	}
-	else if constexpr (requires(T t) { t.Read(buf); }) {
-		t->Read(buf);
-	}
-	else if constexpr (is_same_v<T, Slice>) {
-		int length = 0;
-		Read(buf, &length);
-		shared_ptr<buffer> slice_buffer;
-		WriteSequence(*slice_buffer.get(), buf.data, length);
-		buf.offset += length;
-		*t = Slice(slice_buffer, 0, length);
-	}
-	else {
-		static_assert(!is_same_v<T, T>,"cant found relevant read implementation of Type T");
-	}
-	return true;
-}
-// return true if success
-template <typename T>
-inline bool ReadArray(buffer& buf, T* t, int len) {
-	for (int i = 0; i < len; ++i)
-		if (!Read(buf, t + i))
-			return false;
-	return true;
-}
-// special use of read
 template<typename T>
-T ReadConstruct(buffer& buf) {
-	constexpr auto TLEN = sizeof(T);
-	unsigned char b[TLEN];
-	::Read<T>(buf, reinterpret_cast<T*>(b));
-	return move(*reinterpret_cast<T*>(b));
+void Read(buffer& buf, T* t) {
+	constexpr int TLEN = sizeof(T);
+	using DT = decay_t<T>;
+	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+		buf.drawback(TLEN, t);
+	}
+	else if constexpr (is_same_v<DT, string>) {
+		auto len = Read<int>(buf);
+		new((string*)(t))string(size_t(len), '\0');
+		buf.drawback(len, const_cast<char*>(t->data()));
+	}
+	else if constexpr (requires(T _t) { _t.GetES(); }) {
+		auto es = t->GetES();
+		Read(buf, &es);
+	}
+	else if constexpr (is_same_v<tuple<>, DT>) {}
+	else if constexpr (is_tuple<T>) {
+		auto rest = t->_Get_rest();
+		Read(buf, t->_Myfirst._Val);
+		Read(buf, &rest);
+	}
+	else if constexpr (is_same_v<T, T>) {
+		static_assert(!is_same_v<T, T>, "can't found right imple");
+	}
 }
 template<typename T>
-vector<T> ReadArrayConstruct(buffer& buf,int len) {
-	constexpr auto TLEN = sizeof(T);
-	unsigned char *b = new unsigned char[TLEN + len];
-	auto tb = reinterpret_cast<T*>(b);
+void WriteArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)
-		::Read<T>(buf, tb + i);
-	vector<T> ret(tb, tb + len);
+		Write(buf, t + i);
+}
+template<typename T>
+void ReadArray(buffer& buf, T* t, int len) {
+	for (int i = 0; i < len; ++i)
+		Read(buf, t + i);
+}
+template<typename T>
+vector<decay_t<T>>  ReadArray(buffer& buf, int len) {
+	static_assert(is_constructible_v<decay_t<T>>, "ReadArray will call default contruction,but there is not one"); 
+	vector<decay_t<T>> ret(len);
+	for (int i = 0; i < len; ++i)
+		Read(buf, (&ret[0] + i));
 	return ret;
 }
-//construct buffer
-
-
+template<typename T> requires(is_arithmetic_v<T> || is_enum_v<T>)
+void WriteSequence(buffer& buf, T* t, int len) {
+	buf.append(sizeof(T) * len, t);
+}
+template<typename T> requires(is_arithmetic_v<T> || is_enum_v<T>)
+void	ReadSequence(buffer& buf, T* t, int len) {
+	buf.drawback(sizeof(T) * len, t);
+}
 shared_ptr<buffer> BufferFrom(const char* p, int sz);
 shared_ptr<buffer>  BufferFrom(const string& str);
 

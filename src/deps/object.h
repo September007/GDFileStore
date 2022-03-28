@@ -30,11 +30,13 @@ public:
 	//Snapid_t& operator+=(const Snapid_t& t) { this->time_stamp += t.time_stamp; return *this; }
 	//Snapid_t operator+(const Snapid_t& t) { return Snapid_t(this->time_stamp +t.time_stamp ); }
 	operator time_t() { return this->time_stamp; }
+	auto GetES() { return make_tuple(&time_stamp); }
 };
 //
 class Object_t {
 public:
 	string name;
+	auto GetES() { return make_tuple(&name); }
 };
 //hash object
 // pool is also a hash object
@@ -68,6 +70,7 @@ public:
 	static bool is_meta_pool(int64_t pool) {
 		return pool == POOL_META;
 	}
+	auto GetES() { return make_tuple(&oid, &snap, &hash, &max); }
 };
 
 using gen_t = int64_t;
@@ -80,6 +83,7 @@ struct shard_id_t {
 	operator int8_t() const { return id; }
 
 	static inline shard_id_t NO_SHARD() { return shard_id_t(0); };
+	auto GetES() { return make_tuple(&id); }
 };
 //generation hash object, or the global balah object
 class GHObject_t {
@@ -103,13 +107,8 @@ public:
 	// get literal description of object
 	//@Follow:GHObject_t definition
 	string GetLiteralDescription(GHObject_t const& ghobj);
-	static void Read(buffer& buf, GHObject_t* ghobj) {
-		::Read(buf, &ghobj->hobj.oid.name);
-		::Read(buf, &ghobj->generation);
-	}
-	static void Write(buffer& buf, GHObject_t* ghobj) {
-		::Write(buf, &ghobj->hobj.oid.name);
-		::Write(buf, &ghobj->generation);
+	auto GetES() {
+		return make_tuple(&hobj, &generation, &shard_id, &owner);
 	}
 };
 struct HashForGHObject_t {
@@ -129,6 +128,7 @@ public:
 	PageGroup(const string&& name) :name(name) {}
 	bool operator==(const PageGroup&)const = default;
 	bool operator < (const PageGroup&)const = default;
+	auto GetES() { return make_tuple(&name, &pool); }
 };
 
 inline auto GetObjDirHashInt(GHObject_t const& ghobj) {
@@ -141,27 +141,6 @@ enum class OperationType {
 	Insert,
 	Delete
 };
-template<>
-inline void Write(buffer& buf, OperationType* opet) {
-	int i = int(*opet);
-	::Write(buf, &i);
-}
-template<>
-inline bool Read(buffer& buf, OperationType* opet) {
-	int i;
-	::Read(buf, &i);
-	switch (i) {
-		case int(OperationType::Insert) :
-			*opet = OperationType::Insert;
-			break;
-		case int(OperationType::Delete) :
-			*opet = OperationType::Delete;
-			break;
-		default:
-			LOG_ERROR("serialize", "error convert");
-	}
-	return true;
-}
 // operation state  for detail see file design.vsdx
 enum class OperationState {
 	//for write
@@ -184,19 +163,7 @@ public:
 	}
 	FilePos(const FilePos&) = default;
 	bool operator==(const FilePos&) const = default;
-	static bool Read(buffer& buf, FilePos* fp) {
-		int i;
-		::Read(buf, &i);
-		::Read(buf, &fp->offset);
-		fp->fileAnchor = (i == int(FileAnchor::begin)) ? FileAnchor::begin : FileAnchor::end;
-		return true;
-	}
-	static void Write(buffer& buf, FilePos* fp) {
-		auto i = int(fp->fileAnchor);
-		::Write(buf,&i);
-		::Write(buf, &fp->offset);
-
-	}
+	auto GetES() { return make_tuple(&fileAnchor, &offset); }
 };
 class Operation {
 public:
@@ -226,8 +193,7 @@ public:
 	static shared_ptr<buffer> GetBufferFromSlices(const vector<Slice>& slices, int indicated_length = 0);
 	static int GetFilePos(const Operation ope, int endPos);
 	// support for serialize
-	static bool Read(buffer& buf, Operation* ope);
-	static void Write(buffer& buf, Operation* ope);
+	auto GetES() { return make_tuple(&operationType, &data, &obj, &filePos); }
 };
 
 class OperationWrapper {

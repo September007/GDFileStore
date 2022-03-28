@@ -4,9 +4,9 @@
 #define head FileJournal
 
 auto GetSliceFromWriteSequence(shared_ptr<buffer>buf, const char* t, int size) {
-	auto ret = Slice(buf, buf->length, 0);
-	WriteSequence(*buf.get(), t, size);
-	ret.end = buf->length;
+	auto ret = Slice(buf, buf->data.length(), 0);
+	buf->append(size, (void *)t);
+	ret.end = buf->data.length();
 	return ret;
 }
 //test writes combinition
@@ -30,7 +30,7 @@ TEST(head, CombineOperationsForOneSameObject) {
 		int indicated_length = 0;
 		auto slices = Operation::CombineOperationsForOneSameObject(objData, ops, indicated_length);
 		auto finalBuffer = Operation::GetBufferFromSlices(slices);
-		string finalBufferstr(finalBuffer->data, finalBuffer->data + finalBuffer->length);
+		string finalBufferstr(finalBuffer->data.data(), finalBuffer->data.data() + finalBuffer->data.length());
 		EXPECT_EQ(expect, finalBufferstr);
 	};
 	// BufferFrom and Operation Wrapper

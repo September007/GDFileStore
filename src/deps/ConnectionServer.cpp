@@ -62,10 +62,11 @@ void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv)
 		}
 		auto buf = BufferFrom(content);
 		// decode refer to code from cli.write
-		auto ope = ReadConstruct<Operation>(*(buf.get()));
-		auto osd_len = ReadConstruct<int>(*(buf.get()));
-		auto osds = ReadArrayConstruct<InfoForOSD>(*(buf.get()), osd_len);
-		auto reload_connection = ReadConstruct<bool>(*(buf.get()));
+		auto ope = Read<Operation>(*(buf.get()));
+		auto osd_len = Read<int>(*(buf.get()));
+		auto osds = ReadArray<InfoForOSD>(*(buf.get()), osd_len);
+		is_constructible_v<InfoForOSD>;
+		auto reload_connection = Read<bool>(*(buf.get()));
 		auto result = fs->HandleWriteOperation(ope, osds);
 		if (result == true) {
 			res.body = "success";
