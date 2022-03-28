@@ -6,6 +6,13 @@
 #include<memory>
 using namespace std;
 
+void remove_replicated_key(vector<string> keys) {
+	//remove repliacated key
+	set<string> ss;
+	for (auto& key : keys) {
+		while (!ss.insert(key).second)key = randomValue<string>();
+	}
+}
 auto path = filesystem::absolute("./tmp/testdb").string();
 constexpr auto tries = 1000;
 auto createDB(const string& path) {
@@ -26,6 +33,7 @@ void test_put_get_delete(rocksdb::DB*db) {
 	vector<string> ks(tries), vs(tries);
 	randomValue(&ks[0], tries);
 	randomValue(&vs[0], tries);
+	remove_replicated_key(ks);
 	//store
 	for (int i = 0; i < tries; ++i) {
 		db->Put(wp, ks[i], vs[i]);
@@ -59,9 +67,11 @@ TEST(RocksKV, interface) {
 	EXPECT_TRUE(kv.LoadDB());
 	
 	constexpr auto tries = 1000;
+	int error_cnt = 0;
 	vector<string> keys(tries), values(tries);
 	randomValue(&keys[0],tries);
 	randomValue(&values[0], tries);
+	remove_replicated_key(keys);
 	//set
 	for (int i = 0; i < tries; ++i)
 		kv.SetValue(keys[i], values[i]);
@@ -70,7 +80,11 @@ TEST(RocksKV, interface) {
 	{
 		string got;
 		kv.GetValue(keys[i], got);
+		auto& vi = values[i];
+		auto x = values[i] == got;
 		EXPECT_EQ(values[i], got);
+		if (!x)
+			error_cnt++;
 	}
 	//remove
 	for (int i = 0; i < tries; ++i)

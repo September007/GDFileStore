@@ -34,9 +34,6 @@ vector<pair<key_type, value_type>> RocksKV::GetMatchPrefix(const string& prefix)
 		if (beginWith(prefix, it->key().ToString()))
 			ret.push_back({ string(it->key().ToString()),string(it->value().ToString()) });
 	}
-	if (!it->status().ok()) {
-		std::cout << it->status().ToString();
-	}
 	//dont forget to delete it
 	delete it;
 	return ret;

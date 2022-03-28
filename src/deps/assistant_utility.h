@@ -12,12 +12,9 @@
 #include <concepts>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <random>
-#include <span>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 #include<memory>
@@ -95,7 +92,7 @@ void randomValue(T* t, int len = 1) {
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
 	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
 		for (int i = 0; i < len; ++i)
-			*(uint8_t*)(t) = (rando() % (UINT8_MAX + 1));
+			*(uint8_t*)(t+i) = (rando() % (UINT8_MAX + 1));
 	}
 	else if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
 		randomValue<uint8_t>(const_cast<uint8_t*>( reinterpret_cast<const uint8_t*>(t)), len * sizeof(T) / sizeof(uint8_t));
@@ -103,7 +100,7 @@ void randomValue(T* t, int len = 1) {
 	else if constexpr (is_same_v<string, decay_t<T>>) {
 		for (int i = 0; i < len; ++i) {
 			int slen = rando() % 100 + 1;
-			new((string*)(t)+i)string(slen, '0');
+			new((string*)(t)+i)string(slen, '\0');
 			randomValue<uint8_t>(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(t[i].data())), slen);
 		}
 	}
