@@ -4,13 +4,17 @@
 #include<assistant_utility.h>
 #include<boost/functional/hash.hpp>
 #include<fmt/format.h>
+#define declare_default_cmp_operator(cls)			   \
+bool operator <(const cls&)const = default;	   \
+bool operator ==(const cls&)const = default;	   \
+bool operator !=(const cls&)const = default;
+
 using std::string;
 class Object {
 public:
 	string name;
 	Object(const string& name = "") :name(name) {}
-	bool operator==(const Object&)const = default;
-	bool operator < (const Object&)const = default;
+	declare_default_cmp_operator(Object)
 };
 // the projection from a global object to a certain osd storage object is 
 // pool->pg->obj
@@ -27,6 +31,7 @@ public:
 	//when this been created
 	time_t time_stamp = 0;
 	Snapid_t(time_t t = 0) :time_stamp(t) {}
+	declare_default_cmp_operator(Snapid_t)
 	//Snapid_t& operator+=(const Snapid_t& t) { this->time_stamp += t.time_stamp; return *this; }
 	//Snapid_t operator+(const Snapid_t& t) { return Snapid_t(this->time_stamp +t.time_stamp ); }
 	operator time_t() { return this->time_stamp; }
@@ -36,6 +41,8 @@ public:
 class Object_t {
 public:
 	string name;
+	Object_t(const string name = "") :name(name) {}
+	declare_default_cmp_operator(Object_t)
 	auto GetES() { return make_tuple(&name); }
 };
 //hash object
@@ -45,6 +52,7 @@ public:
 	Object_t oid;
 	Snapid_t snap;
 	HObject_t(Object_t oid = Object_t(), Snapid_t snap = Snapid_t()) :oid(oid) {}
+	declare_default_cmp_operator(HObject_t)
 	/*
 	*  don't wanna use these
 	*/
@@ -78,6 +86,7 @@ struct shard_id_t {
 	int8_t id;
 
 	shard_id_t() : id(0) {}
+	declare_default_cmp_operator(shard_id_t)
 	explicit shard_id_t(int8_t _id) : id(_id) {}
 
 	operator int8_t() const { return id; }
@@ -97,13 +106,19 @@ public:
 	GHObject_t(const HObject_t& hobj = HObject_t(), gen_t generation = 0, shard_id_t shard_id = shard_id_t::NO_SHARD()) :
 		hobj(hobj), generation(generation), shard_id(shard_id) {
 	}
-	bool operator<(const GHObject_t ot)const {
-		return this->hobj.oid.name < ot.hobj.oid.name ||
-			this->hobj.oid.name == ot.hobj.oid.name && this->hobj.pool < ot.hobj.pool;
-	};
-	bool operator==(const GHObject_t& ot)const {
-		return this->hobj.oid.name == ot.hobj.oid.name && this->hobj.pool == ot.hobj.pool;
+	//@Follow 
+	bool operator<(const GHObject_t& obj)const {
+		return this->hobj.oid.name < obj.hobj.oid.name ||
+			this->hobj.oid.name == obj.hobj.oid.name && this->generation < obj.generation;
 	}
+	bool operator==(const GHObject_t& obj)const {
+		return this->hobj.oid.name == obj.hobj.oid.name && this->generation == obj.generation
+			&& this->shard_id == obj.shard_id && this->owner == obj.owner;
+	}
+	bool operator!=(const GHObject_t& obj)const {
+		return !operator==(obj);
+	}
+
 	// get literal description of object
 	//@Follow:GHObject_t definition
 	string GetLiteralDescription(GHObject_t const& ghobj);
@@ -126,8 +141,7 @@ public:
 	uint64_t pool = HObject_t::POOL_META;
 	PageGroup(const string& name = "", uint64_t _pool = 1) :name(name), pool(_pool) {}
 	PageGroup(const string&& name) :name(name) {}
-	bool operator==(const PageGroup&)const = default;
-	bool operator < (const PageGroup&)const = default;
+	declare_default_cmp_operator(PageGroup)
 	auto GetES() { return make_tuple(&name, &pool); }
 };
 
@@ -157,12 +171,12 @@ class FilePos {
 public:
 	FileAnchor fileAnchor;
 	int offset;
-	FilePos(int offset, FileAnchor fileAnchor = FileAnchor::begin)
+	FilePos(int offset=0, FileAnchor fileAnchor = FileAnchor::begin)
 		: offset(offset)
 		, fileAnchor(fileAnchor) {
 	}
 	FilePos(const FilePos&) = default;
-	bool operator==(const FilePos&) const = default;
+	declare_default_cmp_operator(FilePos)
 	auto GetES() { return make_tuple(&fileAnchor, &offset); }
 };
 class Operation {
@@ -179,11 +193,16 @@ public:
 	GHObject_t obj;
 	// operation begin point
 	FilePos filePos;
+	//use memeber default
+	Operation() {}
 	Operation(const GHObject_t& ghobj, OperationType operationType, Slice data, FilePos filePos)
 		: obj(ghobj)
 		, operationType(operationType)
 		, data(data)
 		, filePos(filePos) {
+	}
+	bool operator ==(const Operation& ope)const {
+		return this->operationType==ope.operationType&&obj == ope.obj && data == ope.data && filePos == ope.filePos;
 	}
 	// combine writes on the same object
 	static vector<Slice> CombineOperationsForOneSameObject(const vector<Operation>& operations,

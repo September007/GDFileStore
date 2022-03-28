@@ -133,7 +133,7 @@ Slice:: Slice(const string& str) :data(BufferFrom(str)), start(0), end(str.size(
 }
 
 void Slice::Read(buffer& buf, Slice* sli) {
-	sli->data = shared_ptr<buffer>();
+	new(&sli->data)shared_ptr<buffer>(make_shared<buffer>());
 	::Read(buf, &sli->data->data);
 }
 

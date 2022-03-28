@@ -1,10 +1,20 @@
 #include<test_head.h>
 #include<gtest/gtest.h>
 #include<assistant_utility.h>
+#include<object.h>
+
 //#include<data.h>
 constexpr auto tries = 100;
 #define head assistant_utility
 
+template<typename T>
+bool value_cmp(const T& l, const T& r) { 
+	if constexpr (is_same_v<T, Slice>) {
+		return l.start == r.start && l.end == r.end
+			&& ((l.data == r.data && l.data == nullptr) || (l.data !=  nullptr && r.data != nullptr && *l.data == *r.data));
+	}
+	return l == r; 
+}
 
 TEST(assistant_utility, SpreadCall) {
 	vector<int> params = { 1,2,3,4,5,5,6,6,6,3,6,3,7,7,7,77,7,3,7 };
@@ -52,19 +62,24 @@ auto TestOneKindOfType(buffer& buf) {
 	//test Write
 	for (int i = 0; i < tries; ++i) {
 		Write(buf, &vec[i]);
+		auto& vi = vec[i];
 		T rd;
 		Read(buf, &rd);
-		EXPECT_EQ(rd, vec[i]);
-		if (rd != vec[i])
+		auto x = value_cmp(rd, vi);
+		EXPECT_TRUE(x);
+		if (!x)
 			ret++;
 	}
 	//test WriteArray
-	T* datas = new T[tries], * read_datas = new T[tries];
+	T *datas = new T[tries], * read_datas = new T[tries];
+	randomValue(datas, tries);
 	WriteArray(buf, datas, tries);
 	ReadArray(buf, read_datas, tries);
 	for (int i = 0; i < tries; ++i) {
-		EXPECT_EQ(datas[i], read_datas[i]);
-		if(datas[i] != read_datas[i])
+		auto& di = datas[i], & ri = read_datas[i];
+		auto x = value_cmp(datas[i], read_datas[i]);
+		EXPECT_TRUE(x);
+		if(!x)
 			ret++;
 	}
 	//test WriteSequence
@@ -73,7 +88,7 @@ auto TestOneKindOfType(buffer& buf) {
 		memset(read_datas, 0, tries * sizeof(T));
 		ReadSequence(buf, read_datas, tries);
 		for (int i = 0; i < tries; ++i) {
-			auto x = datas[i] == read_datas[i];
+			auto x = value_cmp(datas[i], read_datas[i]);
 			EXPECT_TRUE(x);
 			if (!x)
 				ret++;
@@ -105,11 +120,6 @@ public:
 	float f;
 	string s;
 	bool operator==(const _clsWithStaticInterface&) const= default;
-	static void Write(buffer& buf, _clsWithStaticInterface *cls) {
-		::Write(buf, &cls->i);
-		::Write(buf, &cls->f);
-		::Write(buf, &cls->s);
-	}
 	auto GetES() { return make_tuple(&i, &f, &s); }
 };
 class _clsWithMemberInterface {
@@ -119,20 +129,9 @@ public:
 	string s;
 	bool operator==(const _clsWithMemberInterface&) const = default;
 	auto GetES() { return make_tuple(&i, &f, &s); }
-	void randomValue() {
-		::randomValue(&this->i);
-		::randomValue(&this->f);
-		::randomValue(&this->s);
-	}
 };
 TEST(assistant_utility, serialize) {
 	buffer buf;
-	//string s;
-	//randomValue(&s);
-	//Write(buf, &s);
-	//string read_s;
-	//Read(buf, &read_s);
-	//EXPECT_EQ(s,read_s);
 	EXPECT_EQ(TestOneKindOfType<char>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<uint8_t>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<uint16_t>(buf), 0);
@@ -145,15 +144,21 @@ TEST(assistant_utility, serialize) {
 	EXPECT_EQ(TestOneKindOfType<string>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<_clsWithMemberInterface>(buf), 0);
 	EXPECT_EQ(TestOneKindOfType<_clsWithStaticInterface>(buf), 0);
-	_clsWithStaticInterface _cls, r_cls;
-	_cls.i = 100, _cls.f = 1000, _cls.s = "dasda";
-	Write(buf, &_cls);
-	Read(buf, &r_cls);
-	EXPECT_EQ(_cls, r_cls);
-	_clsWithMemberInterface _mcls, r_mcls;
-	_mcls.i = 100, _mcls.f = 1000, _mcls.s = "dasda";
-	Write(buf, &_mcls);
-	Read(buf, &r_mcls);
-	EXPECT_EQ(_mcls, r_mcls);
-
+}
+TEST(assistant_utility, serialize_object_class) {
+	buffer buf;
+	//class in object.h
+	EXPECT_EQ(TestOneKindOfType<Slice>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<FileAnchor>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<FilePos>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<Object_t>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<HObject_t>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<gen_t>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<shard_id_t>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<GHObject_t>(buf), 0); constexpr int lghobj = sizeof(GHObject_t);
+	EXPECT_EQ(TestOneKindOfType<OperationType>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<Operation>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<OperationState>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<PageGroup>(buf), 0);
+	EXPECT_EQ(TestOneKindOfType<Snapid_t>(buf), 0);
 }

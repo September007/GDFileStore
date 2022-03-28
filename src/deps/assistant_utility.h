@@ -101,13 +101,20 @@ void randomValue(T* t, int len = 1) {
 		randomValue<uint8_t>(const_cast<uint8_t*>( reinterpret_cast<const uint8_t*>(t)), len * sizeof(T) / sizeof(uint8_t));
 	}
 	else if constexpr (is_same_v<string, decay_t<T>>) {
-		int slen = rando() % 100 + 1;
-		new(t)string(slen,'0');
-		randomValue<uint8_t>(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(t->data())), slen);
+		for (int i = 0; i < len; ++i) {
+			int slen = rando() % 100 + 1;
+			new((string*)(t)+i)string(slen, '0');
+			randomValue<uint8_t>(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(t[i].data())), slen);
+		}
 	}
 	else if constexpr (requires(T _t) { _t.GetES(); }) {
-		auto es = t->GetES();
-		randomValue(&es);
+		for (int i = 0; i < len; ++i) {
+			auto es = t[i].GetES();
+			randomValue(&es);
+			//for more random
+			if constexpr (requires(decay_t<T>_t) { T::RandomValue(&_t); })
+				T::RandomValue((T * )(t)+i);
+		}
 	}
 	else if constexpr (is_same_v<T, tuple<>>) {}
 	else if constexpr (is_tuple<T>) {
@@ -131,6 +138,8 @@ struct buffer {
 public:
 	string data;
 	int offset = 0;
+	buffer(const string data = "",int offset=0) :data(data) ,offset(offset) {}
+	bool operator==(const buffer& buf) { return this->data == buf.data && this->offset == buf.offset; }
 	void append(int len, const void* src) {
 		data.append(len, '\0');
 		memcpy(data.data() + data.size() - len, src, len);
@@ -152,7 +161,7 @@ public:
 	shared_ptr<buffer> data;
 	int start;
 	int end;
-	Slice(shared_ptr<buffer> data, int start, int end)
+	Slice(shared_ptr<buffer> data=nullptr, int start=0, int end=0)
 		: data(data)
 		, start(start)
 		, end(end) {
@@ -164,7 +173,12 @@ public:
 	}
 	explicit Slice(const string& str);
 	Slice(const Slice&) = default;
-	bool operator==(const Slice&) const = default;
+	// value cmp
+	bool operator==(const Slice& sl) const {
+		return this->start == sl.start && this->end == sl.end &&
+			((this->data == sl.data && this->data == nullptr) ||
+				(this->data != nullptr && sl.data != nullptr && (*this->data == *sl.data)));
+	}
 	int GetSize() const { return end - start; }
 	Slice SubSlice(int _start, int _size) {
 		if (_start + _size < GetSize())
@@ -172,9 +186,10 @@ public:
 		else
 			return Slice(data, this->start + _start, this->end);
 	}
-	// support for serilize
+	// support for serilize and rando
 	static void Read(buffer& buf, Slice* sli);
 	static void Write(buffer& buf, Slice* s);
+	static void RandomValue(Slice* sli) { new(&sli->data)shared_ptr<buffer>(make_shared<buffer>()); }
 	auto GetES() { return make_tuple(&start, &end); }
 };
 
@@ -261,6 +276,10 @@ void Read(buffer& buf, T* t) {
 	else if constexpr (requires(T _t) { _t.GetES(); }) {
 		auto es = t->GetES();
 		Read(buf, &es);
+		// more action ,may for shared_ptr<T> balabalah
+		if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); T::Read(declval<buffer&>(), &_t); }) {
+			T::Read(buf, t);
+		}
 	}
 	else if constexpr (is_same_v<tuple<>, DT>) {}
 	else if constexpr (is_tuple<T>) {
