@@ -1,5 +1,11 @@
-﻿/* this file implement 
+﻿/* this file implement
 * log,formatted time,IO,serialize,
+* @Contract
+*	1.	if specified class is plained(has no pointer memeber like raw pointer or shared_ptr),
+*		you only need achieve the member function GetES() to point out member address,
+*		but if not, you should achieve three more function to do some spcified work
+*		(you still could use GetES() to do with other non-pointer member),check class::Slice see detail;
+*	2.	randomValue,Write,Read do not expect type tuple(lazy)
 */
 #pragma once
 #ifndef ASSISTANT_UTILITY_HEAD
@@ -19,10 +25,12 @@
 #include <vector>
 #include<memory>
 using namespace std;
+template<template<typename...args>typename templateType, typename T>
+constexpr bool is_from_template = false;
+template<template<typename...args>typename templateType, typename...args>
+constexpr bool is_from_template<templateType, templateType<args...>> = true;;
 template<typename T>
-constexpr bool is_tuple = false;
-template<typename ...args>
-constexpr bool is_tuple<tuple<args...>> = true;
+constexpr bool is_tuple = is_from_template<tuple, T>;
 
 shared_ptr<spdlog::logger> GetLogger(const string& name,
 	const bool force_isolate = false, const string& fileClass = "integrated");
@@ -58,37 +66,10 @@ std::string getTimeStr(std::string_view fmt);
 inline std::string getTimeStr() {
 	return getTimeStr("%Y-%m-%d %H:%M:%S");
 }
-// distribute task
-template <typename SpreadNode,
-	typename ChildTask,
-	typename CollectRets,
-	typename... RestParams>
-	requires invocable<ChildTask, SpreadNode, RestParams...>&&
-invocable<CollectRets, vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>&&>
-inline invoke_result_t<CollectRets, vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>&&>
-SpreadCall(ChildTask ct, CollectRets cr, vector<SpreadNode> vs, RestParams&&... restParams) {
-	using ChildTaskCallResultType = invoke_result_t<ChildTask, SpreadNode, RestParams...>;
-	vector<ChildTaskCallResultType> retparam;
-	for (auto& node : vs)
-		retparam.push_back(ct(node, forward<RestParams>(restParams)...));
-	auto ret = cr(retparam);
-	return ret;
-}
 
-template <typename SpreadNode, typename ChildTask, typename... RestParams>
-	requires invocable<ChildTask, SpreadNode, RestParams...>
-inline vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>>
-SpreadCall(ChildTask ct, vector<SpreadNode> vs, RestParams&&... restParams) {
-	return SpreadCall(
-		ct,
-		[](vector<invoke_result_t<ChildTask, SpreadNode, RestParams...>> rets) {
-			return rets;
-		},
-		vs, forward<RestParams>(restParams)...);
-}
 // suppose pointer t don't need call destruction
 template<typename T>
-void randomValue(T* t, int len = 1) {
+void randomValue(T* t, int len = 1,bool call_des=false) {
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
 	using DT = decay_t<T>;
 	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
@@ -100,7 +81,8 @@ void randomValue(T* t, int len = 1) {
 	}
 	else if constexpr (is_floating_point_v<T>) {
 		static  uniform_real_distribution<DT> urd(numeric_limits<DT>::min(), numeric_limits<DT>::max());
-		*const_cast<DT*>(t) = urd(rando);
+		for (int i = 0; i < len;++i)
+			*const_cast<DT*>(t+i) = urd(rando);
 	}
 	else if constexpr (is_same_v<string, decay_t<T>>) {
 		for (int i = 0; i < len; ++i) {
@@ -120,9 +102,18 @@ void randomValue(T* t, int len = 1) {
 	}
 	else if constexpr (is_same_v<T, tuple<>>) {}
 	else if constexpr (is_tuple<T>) {
+		//expect tuple only come from class.GetES()
+		LOG_EXPECT_EQ("randomValue", len, 1);
 		auto rest = t->_Get_rest();
 		randomValue(t->_Myfirst._Val);
 		randomValue(&rest);
+	}
+	else if constexpr (is_from_template<vector, T>) {
+		for (int i = 0; i < len; ++i) {
+			int sz = rando() % 10 + 1;
+			new(t+i)T(sz);
+			randomValue<typename T::value_type>(&(*t)[0], sz);
+		}
 	}
 	else if constexpr (is_same_v<T, T>) {
 		static_assert(!is_same_v<T, T>, "can't found suited imple,plz make it");
@@ -134,6 +125,7 @@ auto randomValue() {
 	randomValue<T>(reinterpret_cast<T*>(buf), 1);
 	return move(*reinterpret_cast<T*>(buf));
 }
+
 // Serialize and Unserialize
 // buffer is obligate to control data block
 struct buffer {
@@ -153,10 +145,6 @@ public:
 	string universal_str() { return data; }
 	auto GetES() { return make_tuple(&data, &offset); }
 };
-
-// need gthis delaration
-inline shared_ptr<buffer> BufferFrom(const char* p, int sz);
-inline shared_ptr<buffer>  BufferFrom(const string& str);
 
 class Slice {
 public:
@@ -201,6 +189,10 @@ template<typename T>
 void Read(buffer& buf, T* t);
 template<typename T>
 decay_t<T> Read(buffer& buf);
+template<typename T>
+void WriteArray(buffer& buf, T* t, int len);
+template<typename T>
+void ReadArray(buffer& buf, T* t, int len);
 
 template< typename T>
 void Write(buffer& buf, T* t) {
@@ -227,6 +219,11 @@ void Write(buffer& buf, T* t) {
 		auto rest = t->_Get_rest();
 		Write(buf, &rest);
 	}
+	else if constexpr (is_from_template<vector, T>) {
+		int sz = t->size();
+		buf.append(sizeof(sz), &sz);
+		WriteArray(buf, &(*t)[0], sz);
+	}
 	else if constexpr (is_same_v<T,T>) {
 		//static_assert(!is_same_v<T, T>,"can't found suited imple of write");
 		LOG_ERROR("integrated", "can't found suited imple of write");
@@ -237,35 +234,15 @@ template<typename T>
 decay_t<T> Read(buffer& buf) {
 	constexpr int TLEN = sizeof(T);
 	using DT = decay_t<T>;
-	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
-		char _inside_buf[TLEN];
-		buf.drawback(TLEN, _inside_buf);
-		return *reinterpret_cast<DT*>(_inside_buf);
-	}
-	else if constexpr (is_same_v<DT, string>) {
-		auto len = Read<int>(buf);
-		string ret(len);
-		buf.drawback(len, ret.data());
-		return ret;
-	}
-	else if constexpr (requires(T _t) { _t.GetES(); }) {
-		char _inside_buf[TLEN];
-		DT* reinterpreted = reinterpret_cast<DT*>(_inside_buf);
-		//call fill
-		Read(buf, reinterpreted);
-		// more action ,may for shared_ptr<T> balabalah
-		if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); T::Read(declval<buffer&>(), &_t); }) {
-			T::Read(buf, reinterpreted);
-		}
-		return move(*reinterpreted);
-	}
-	else if constexpr (is_same_v<T, T>) {
-		static_assert(!is_same_v<T, T>, "can't found right imple");
-	}
+	char cache[TLEN];
+	Read<DT>(buf, reinterpret_cast<DT*>(cache));
+	return move(*(reinterpret_cast<DT*>(cache)));
 }
 
 template<typename T>
 void Read(buffer& buf, T* t) {
+	//if (call_Des)
+		//t->~T();
 	constexpr int TLEN = sizeof(T);
 	using DT = decay_t<T>;
 	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
@@ -289,6 +266,12 @@ void Read(buffer& buf, T* t) {
 		auto rest = t->_Get_rest();
 		Read(buf, t->_Myfirst._Val);
 		Read(buf, &rest);
+	}
+	else if constexpr (is_from_template<vector, T>) {
+		int sz;
+		buf.drawback(sizeof(sz), &sz);
+		new(t)T(sz);
+		ReadArray(buf, &(*t)[0], sz);
 	}
 	else if constexpr (is_same_v<T, T>) {
 		static_assert(!is_same_v<T, T>, "can't found right imple");
@@ -320,7 +303,4 @@ template<typename T> requires(is_arithmetic_v<T> || is_enum_v<T>)
 void	ReadSequence(buffer& buf, T* t, int len) {
 	buf.drawback(sizeof(T) * len, t);
 }
-shared_ptr<buffer> BufferFrom(const char* p, int sz);
-shared_ptr<buffer>  BufferFrom(const string& str);
-
 #endif  // ASSISTANT_UTILITY_HEAD

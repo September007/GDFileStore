@@ -16,7 +16,6 @@ else()
     message("set vcpkg as cache says ${VCPKG_TARGET_TRIPLET}")
 endif()
 
-#set(GTest_DIR /usr/local/vcpkg/installed/x64-linux/share/GTest)
 # parse regex_path
 function( parse_regex_path return_set regex_path)
     set(regex_path ${regex_path} ${ARGN})

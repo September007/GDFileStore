@@ -129,7 +129,7 @@ std::string getTimeStr(std::string_view fmt) {
 
 
 
-Slice:: Slice(const string& str) :data(BufferFrom(str)), start(0), end(str.size()) {
+Slice:: Slice(const string& str) :data(make_shared<buffer>(str)), start(0), end(str.size()) {
 }
 
 void Slice::Read(buffer& buf, Slice* sli) {
@@ -146,13 +146,3 @@ void Slice::Write(buffer& buf, Slice* s) {
 	}
 }
 
-
-shared_ptr<buffer> BufferFrom(const char* p, int sz) {
-	shared_ptr<buffer> ret(new buffer);
-	WriteSequence(*ret.get(), p, sz);
-	return ret;
-}
-
-shared_ptr<buffer> BufferFrom(const string& str) {
-	return BufferFrom(str.data(), str.size());
-}

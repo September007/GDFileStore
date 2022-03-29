@@ -28,6 +28,7 @@ auto createDB(const string& path) {
 };
 void test_put_get_delete(rocksdb::DB*db) {
 
+	auto error_cnt = 0;
 	auto rp = rocksdb::ReadOptions();
 	auto wp = rocksdb::WriteOptions();
 	vector<string> ks(tries), vs(tries);
@@ -41,7 +42,12 @@ void test_put_get_delete(rocksdb::DB*db) {
 	//get
 	for (int i = 0; i < tries; ++i) {
 		string value;
+		auto vi = vs[i];
 		auto status = db->Get(rp, ks[i], &value);
+		auto x = value == vi;
+		if (!x) {
+			error_cnt++;
+		}
 		EXPECT_EQ(value, vs[i]);
 	}
 	//delete

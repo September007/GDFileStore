@@ -60,12 +60,12 @@ void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv)
 				return true;
 				});
 		}
-		auto buf = BufferFrom(content);
 		// decode refer to code from cli.write
+		auto buf = make_shared< buffer>(content);
+
 		auto ope = Read<Operation>(*(buf.get()));
 		auto osd_len = Read<int>(*(buf.get()));
 		auto osds = ReadArray<InfoForOSD>(*(buf.get()), osd_len);
-		is_constructible_v<InfoForOSD>;
 		auto reload_connection = Read<bool>(*(buf.get()));
 		auto result = fs->HandleWriteOperation(ope, osds);
 		if (result == true) {
