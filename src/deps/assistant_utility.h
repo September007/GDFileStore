@@ -224,8 +224,8 @@ void Write(buffer& buf, T* t) {
 		buf.append(sizeof(sz), &sz);
 		WriteArray(buf, &(*t)[0], sz);
 	}
-	else if constexpr (is_same_v<T,T>) {
-		//static_assert(!is_same_v<T, T>,"can't found suited imple of write");
+	else if constexpr (is_same_v<T, T>) {
+		static_assert(!is_same_v<T, T>, "can't found right imple");
 		LOG_ERROR("integrated", "can't found suited imple of write");
 	}
 }

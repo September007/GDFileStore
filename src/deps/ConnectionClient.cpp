@@ -1,6 +1,6 @@
 #include<connection.h>
 #include<ConnectionClient.h>
-
+// create link, push param, wait return
 ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 	const GHObject_t& ghobj,  Operation ope, const vector<InfoForOSD>& osds, bool reloadConnection) {
 	if (osds.size() == 0)
@@ -13,11 +13,19 @@ ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 	// code for params
 	Write<Operation>(buf, &ope);
 	Write(buf, &osd_cnt);
-	WriteArray(buf, &osds[0], osds.size());
+	WriteArray(buf, const_cast<InfoForOSD*>(& osds[0]), osds.size());
 	Write(buf, &reloadConnection);
 	auto str = buf.universal_str();
 	auto str_len = str.size();
-	//auto res = cl.Get("/hello");
+	////auto res = cl.Get("/hello");
+	//{
+	//	auto b = buf.universal_str();
+	//	auto buf = make_shared<buffer>(b);
+	//	auto ope = Read<Operation>(*(buf.get()));
+	//	auto osd_len = Read<int>(*(buf.get()));
+	//	auto osds = ReadArray<InfoForOSD>(*(buf.get()), osd_len);
+	//	auto reload_connection = Read<bool>(*(buf.get()));
+	//}
 	httplib::Result res = cl.Post("/write",str_len, [&](size_t offset, size_t length, DataSink& sink) {
 		sink.write(str.data() + offset, length);
 		return true; // return 'false' if you want to cancel the request.

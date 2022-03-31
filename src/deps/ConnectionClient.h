@@ -9,7 +9,7 @@ using std::vector;
 using namespace httplib;
 /* use http for now
 */
-class FSConnnectionClient {
+class FSConnnectionClient:FSCCient<FSConnnectionClient> {
 public:
 	//@Contract_1 first osd mean your leader osd
 	//return true if success

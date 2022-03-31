@@ -15,7 +15,7 @@ void FSConnnectionServer::listen(GDFileStore* fs)   try {
 	}
 	thread listenThread(SrvThreadMain,fs,&this->srv );
 	//free this
-	listenThread.detach();
+	listenThread.join();
 }
 catch (std::exception& e) {
 	LOG_ERROR("server", fmt::format("server::listen get error[{}]", e.what()));

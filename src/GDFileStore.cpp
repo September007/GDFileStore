@@ -27,6 +27,8 @@ bool GDFileStore::HandleWriteOperation(const Operation& wope, const vector<InfoF
 		return ReplicaHandleWriteOperation(wope, osds);
 }
 bool GDFileStore::PrimaryHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds) {
+	//
+	this->journal.HandleWriteOperation(wope, true);
 	return false;
 }
 bool GDFileStore::ReplicaHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds) {
