@@ -4,6 +4,7 @@
 #include<string>
 #include<object.h>
 #include<assistant_utility.h>
+#include<config.h>
 using std::string;
 enum class ConnectionReturnType {
 	success = 0,
@@ -19,20 +20,16 @@ public:
 	bool operator==(const InfoForOSD& ifs)const { return name == ifs.name && connection_str == ifs.connection_str; }
 	auto GetES() { return make_tuple(&name, &connection_str); }
 };
-// Curiously recuring template pattern
-template<typename T>
-class FSCCient {
-public:
-	ConnectionReturnType WriteAndWaitReturn(const GHObject_t& ghobj, Operation ope, const vector<InfoForOSD>& osds, bool reloadConnection = false);
-};
 
-#endif 
-template<typename T>
-inline ConnectionReturnType FSCCient<T>::WriteAndWaitReturn(const GHObject_t& ghobj, Operation ope, const vector<InfoForOSD>& osds, bool reloadConnection) {
-	return  static_cast<T*>(this)->WriteAndWaitReturn(ghobj, ope, osds, reloadConnection);
+inline auto GetOSDConfig(const string& osd_name) {
+	auto http_config = GetConfig(osd_name, "http_server");
+	auto host = http_config["addr"].get<string>();
+	auto port = http_config["port"].get<int>();
+	if (host == "" || port == int{}) {
+		LOG_ERROR("server", fmt::format("read {}::server config failed", osd_name));
+		return make_pair<bool, InfoForOSD>(false, InfoForOSD());
+	}
+	else
+		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, fmt::format("{}:{}", host, port)));
 }
-
-template<typename T>
-class FSCServer {
-
-};
+#endif 

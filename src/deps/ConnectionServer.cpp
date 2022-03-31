@@ -1,36 +1,50 @@
 #include<ConnectionServer.h>
 
-void FSConnnectionServer::listen(GDFileStore* fs)   try {
-	if (srv.is_running())
+void FSConnnectionServer::listen(GDFileStore* fs) {
+	if (this->is_srv_running())return;
+	// no matter what task the server was working on,shut it down
+	if (srv.is_running()) {
+		LOG_WARN("server", fmt::format("shut working server down"));
 		srv.stop();
+	}
 	if (!this->srv.is_valid()) {
 		LOG_ERROR("server", "server is invalid");
 	};
-	auto http_config = GetConfig(fs->GetOsdName(), "http_server");
-	auto host = http_config["addr"].get<string>();
-	auto port = http_config["port"].get<int>();
-	if (host == "" || port == int{}) {
-		LOG_ERROR("server", "read server config failed");
-		return;
+	// not use lock_gurad because lifetime or underlying executionof listenThread is half crossing exclusive area
+	thread x;
+	access_to_is_running.lock();
+	try {
+		thread listenThread(&FSConnnectionServer::SrvThreadMain, this, fs, &this->srv);
+		is_running = true;
+		x = move(listenThread);
 	}
-	thread listenThread(SrvThreadMain,fs,&this->srv );
-	//free this
-	listenThread.join();
-}
-catch (std::exception& e) {
-	LOG_ERROR("server", fmt::format("server::listen get error[{}]", e.what()));
-	return;
+	catch (std::exception& e) {
+		LOG_ERROR("server", fmt::format("server::listen get error[{}]", e.what()));
+	}
+	access_to_is_running.unlock();
+	x.join();
 }
 
 void FSConnnectionServer::stop() {
 	//dont konw if this is thread-safe
 	srv.stop();
+	is_running = false;
 }
 
 void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv) {
+	auto config_result = ResponseConfig(this, fs, p_srv);
+	if (!config_result) {
+		LOG_ERROR("server", fmt::format("{}::server::{} start failed beacuse of config fialed", fs->fsname, __func__));
+		return;
+	}
+	auto& srv = *p_srv;
+	srv.listen("127.0.0.1", 8080);
+}
+
+bool FSConnnectionServer::ResponseConfig(FSConnnectionServer* fscs, GDFileStore* fs, httplib::Server* p_srv) {
 	if (!p_srv) {
 		LOG_ERROR("sever", fmt::format("get null server"));
-		return;
+		return false;
 	}
 	// refer
 	auto& srv = *p_srv;
@@ -38,7 +52,7 @@ void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv)
 	srv.Get("/hello", [](const Request& req, Response& res)->bool {
 		res.body = "hello"; return true;
 		});
-	srv.Post("/write", [fs=fs](const Request& req, Response& res, const ContentReader& content_reader)->bool {
+	srv.Post("/write", [fs = fs](const Request& req, Response& res, const ContentReader& content_reader)->bool {
 		string content;
 		if (req.is_multipart_form_data()) {
 			//this is not adopt for now
@@ -73,6 +87,7 @@ void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv)
 		}
 		return true;
 		});
+	srv.Post("/read", [](const Request& req, Response& rep) {
 
-	srv.listen("127.0.0.1", 8080);
+		});
 }

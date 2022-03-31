@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 # Enable C++20
-set(CMAKE_CXX_STANDARD 20)
+#set(CMAKE_CXX_STANDARD 20)
 # Set C++20 directories
 #add_compile_options(-isystem /usr/include/c++/9)
 # vcpkg <--
@@ -39,7 +39,6 @@ option(ASAN_ENABLED "Build this target with AddressSanitizer" ON)
 #    add_link_options( -fsanitize=address)
 #  endif()
 #endif()
-
 option(test_on "will build tests" ON)
 
 Project(GDFileStore)

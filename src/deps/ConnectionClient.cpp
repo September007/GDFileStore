@@ -38,3 +38,9 @@ ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 	else
 		return ConnectionReturnType::fail_anyway;
 }
+
+ConnectionReturnType FSConnnectionClient::Read
+(const GHObject_t& ghobj, Operation r, const InfoForOSD& primary_osd, bool reloadConnection) {
+
+	return ConnectionReturnType();
+}

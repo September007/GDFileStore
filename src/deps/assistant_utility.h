@@ -49,11 +49,11 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 #define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not. [{}:{}]!=[{}:{}]at {}:{}"\
         ,#l,l,#r,r,__FILE__,__LINE__);}while(0)
 
-#define LOG_INFO(logName,msg) do { GetLogger(logName)->info("{} at {}:{}",msg,__FILE__,__LINE__);}while(0)
+#define LOG_INFO(logName,msg) do { GetLogger(logName)->info("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
-#define LOG_WARN(logName,msg) do { GetLogger(logName)->warn("msg at {}:{}",msg,__FILE__,__LINE__);}while(0)
+#define LOG_WARN(logName,msg) do { GetLogger(logName)->warn("{}: msg at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
-#define LOG_ERROR(logName,msg) do { GetLogger(logName)->error("{} at {}:{}",msg,__FILE__,__LINE__);}while(0)
+#define LOG_ERROR(logName,msg) do { GetLogger(logName)->error("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
 #define randomDefine x
 #pragma endregion
