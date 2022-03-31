@@ -44,6 +44,7 @@ auto TestOneKindOfType(buffer& buf) {
 		Write(buf, &vec[i]);
 		auto& vi = vec[i];
 		T rd;
+		rd.~T();
 		Read(buf, &rd);
 		auto x = value_cmp(rd, vi);
 		EXPECT_TRUE(x);

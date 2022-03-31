@@ -52,7 +52,7 @@ public:
 	ConnectionReturnType WriteAndWaitReturn(const GHObject_t& ghobj,Operation, const vector<InfoForOSD>& osds, bool reloadConnection = false);
 	template<typename ...argsType>
 	auto Get(InfoForOSD osd,argsType...args) {
-		httplib::Client cl(osd.connection_str);
+		httplib::Client cl(osd.GetConnectionstr());
 		return cl.Get(forward<argsType>(args)...);
 	}
 	ConnectionReturnType Read(const GHObject_t& ghobj, Operation r, const InfoForOSD& primary_osd, bool reloadConnection);

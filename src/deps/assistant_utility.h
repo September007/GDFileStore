@@ -67,9 +67,21 @@ inline std::string getTimeStr() {
 	return getTimeStr("%Y-%m-%d %H:%M:%S");
 }
 
+template<typename T>
+auto randomValue();
+template<typename T>
+void randomValue(T* t, int len = 1, bool call_des = false);
+template<typename T,int n=0>requires is_from_template<tuple,T>
+void _tupleRandomValue(T* t) {
+	if constexpr (n == tuple_size_v<T>)return;
+	else {
+		randomValue(std::get<n>(*t));
+		_tupleRandomValue<T, n + 1>(t);
+	}
+}
 // suppose pointer t don't need call destruction
 template<typename T>
-void randomValue(T* t, int len = 1,bool call_des=false) {
+void randomValue(T* t, int len,bool call_des) {
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
 	using DT = decay_t<T>;
 	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
@@ -94,19 +106,16 @@ void randomValue(T* t, int len = 1,bool call_des=false) {
 	else if constexpr (requires(T _t) { _t.GetES(); }) {
 		for (int i = 0; i < len; ++i) {
 			auto es = t[i].GetES();
-			randomValue(&es);
+			_tupleRandomValue(&es);
 			//for more random
 			if constexpr (requires(decay_t<T>_t) { T::RandomValue(&_t); })
 				T::RandomValue((T * )(t)+i);
 		}
 	}
-	else if constexpr (is_same_v<T, tuple<>>) {}
 	else if constexpr (is_tuple<T>) {
 		//expect tuple only come from class.GetES()
 		LOG_EXPECT_EQ("randomValue", len, 1);
-		auto rest = t->_Get_rest();
-		randomValue(t->_Myfirst._Val);
-		randomValue(&rest);
+		_tupleRandomValue(t);
 	}
 	else if constexpr (is_from_template<vector, T>) {
 		for (int i = 0; i < len; ++i) {
@@ -194,6 +203,30 @@ void WriteArray(buffer& buf, T* t, int len);
 template<typename T>
 void ReadArray(buffer& buf, T* t, int len);
 
+template<typename T, int n = 0>requires is_from_template<tuple, T>
+void _TupleWrite(buffer& buf, T t);
+template<typename T, int n = 0>requires is_from_template<tuple, T>
+void _TupleRead(buffer& buf, T t);
+
+template<typename T, int n = 0>requires is_from_template<tuple, T>
+void _TupleWrite(buffer& buf, T *t)
+{
+	if constexpr (n == tuple_size_v<T>)return;
+	else {
+		Write(buf, std::get<n>(*t));
+		_TupleWrite<T, n + 1>(buf,t);
+	}
+}
+
+template<typename T, int n = 0>requires is_from_template<tuple, T>
+void _TupleRead(buffer& buf, T *t)
+{
+	if constexpr (n == tuple_size_v<T>)return;
+	else {
+		Read(buf, std::get<n>(*t));
+		_TupleRead<T, n + 1>(buf, t);
+	}
+}
 template< typename T>
 void Write(buffer& buf, T* t) {
 	constexpr int TLEN = sizeof(T);
@@ -207,17 +240,14 @@ void Write(buffer& buf, T* t) {
 	}
 	else if constexpr (requires(T _t) { _t.GetES(); }) {
 		auto es = t->GetES();
-		Write(buf, &es);
+		_TupleWrite(buf, &es);
 		// more action ,may for shared_ptr<T> balabalah
 		if constexpr (requires(T t) { T::Write(declval<buffer&>(), &t); T::Read(declval<buffer&>(), &t); }) {
 			T::Write(buf, t);
 		}
 	}
-	else if constexpr (is_same_v<decay_t<T>, tuple<>>) return;
-	else if constexpr (is_tuple<decay_t<T>>) {
-		Write(buf, t->_Myfirst._Val);
-		auto rest = t->_Get_rest();
-		Write(buf, &rest);
+	else if constexpr (is_from_template<tuple, T>) {
+		_TupleWrite(buf, t);
 	}
 	else if constexpr (is_from_template<vector, T>) {
 		int sz = t->size();
@@ -255,17 +285,14 @@ void Read(buffer& buf, T* t) {
 	}
 	else if constexpr (requires(T _t) { _t.GetES(); }) {
 		auto es = t->GetES();
-		Read(buf, &es);
+		_TupleRead(buf, &es);
 		// more action ,may for shared_ptr<T> balabalah
 		if constexpr (requires(T _t) { T::Write(declval<buffer&>(), &_t); T::Read(declval<buffer&>(), &_t); }) {
 			T::Read(buf, t);
 		}
 	}
-	else if constexpr (is_same_v<tuple<>, DT>) {}
-	else if constexpr (is_tuple<T>) {
-		auto rest = t->_Get_rest();
-		Read(buf, t->_Myfirst._Val);
-		Read(buf, &rest);
+	else if constexpr (is_from_template<tuple,T>){
+		_TupleRead(buf, t);
 	}
 	else if constexpr (is_from_template<vector, T>) {
 		int sz;

@@ -1,7 +1,8 @@
 ﻿#include<assistant_utility.h>
+#include<filesystem>
 shared_ptr<spdlog::logger> GetLogger(const string& name, const bool force_isolate, const string& fileClass) {
 	//@Todo: read log file root from json
-	static auto logFileRoot = filesystem::absolute("./tmp/logs").string();
+	static auto logFileRoot = std::filesystem::absolute("./tmp/logs").string();
 	// set all output into one file for debug
 	//if (!force_isolate && name != "integrated")
 	//	return GetLogger("integrated");
@@ -84,7 +85,7 @@ string ReadFile(const string& path) {
 	return ret;
 }
 bool WriteFile(const string& path, const string& content, const bool create_parent_dir_if_missing) try {
-	auto objDir = path;
+	auto&objDir = path;
 	ofstream out(objDir);
 	if (!out.good()) {
 		auto parentDir = filesystem::path(objDir).parent_path();
@@ -144,5 +145,8 @@ void Slice::Write(buffer& buf, Slice* s) {
 		buffer b;
 		::Write(buf, &b);
 	}
+	using tif = tuple<int*, float*>;
+	tif a;
+	auto i=std::get<0>(a);
 }
 

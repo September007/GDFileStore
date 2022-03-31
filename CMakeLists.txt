@@ -55,14 +55,16 @@ find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED) 
 find_package(RocksDB CONFIG REQUIRED) 
 find_package(rpclib CONFIG REQUIRED) 
-find_package(concurrencpp CONFIG REQUIRED)
+#find_package(concurrencpp CONFIG REQUIRED)    
+find_package(HPX CONFIG REQUIRED)
 # head only
 find_package(nlohmann_json CONFIG REQUIRED)
 
 #target_link_libraries(main PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 set (dependencis 
             PUBLIC  GTest::gtest 
-            PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb rpclib::rpc  concurrencpp::concurrencpp)
+            PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb rpclib::rpc
+                      HPX::hpx)
 if(test_on)
 #
     add_compile_definitions(TEST_ON)

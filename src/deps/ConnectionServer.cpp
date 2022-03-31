@@ -38,7 +38,13 @@ void FSConnnectionServer::SrvThreadMain(GDFileStore* fs, httplib::Server* p_srv)
 		return;
 	}
 	auto& srv = *p_srv;
-	srv.listen("127.0.0.1", 8080);
+	auto osd_info = GetOSDConfig(fs->GetOsdName());
+	if (!osd_info.first) {
+		LOG_ERROR("server", fmt::format("get {}.server config failed", fs->GetOsdName()));
+		return;
+	}
+	//listen on specified host:port
+	srv.listen(osd_info.second.host.c_str(), osd_info.second.port);
 }
 
 bool FSConnnectionServer::ResponseConfig(FSConnnectionServer* fscs, GDFileStore* fs, httplib::Server* p_srv) {
@@ -90,4 +96,5 @@ bool FSConnnectionServer::ResponseConfig(FSConnnectionServer* fscs, GDFileStore*
 	srv.Post("/read", [](const Request& req, Response& rep) {
 
 		});
+	return true;
 }

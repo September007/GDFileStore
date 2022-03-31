@@ -5,7 +5,7 @@ ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 	const GHObject_t& ghobj,  Operation ope, const vector<InfoForOSD>& osds, bool reloadConnection) {
 	if (osds.size() == 0)
 		return ConnectionReturnType::fail_of_primary;
-	httplib::Client cl(osds[0].connection_str);
+	httplib::Client cl(osds[0].GetConnectionstr());
 	if(! cl.is_valid())
 		return ConnectionReturnType::fail_anyway;
 	buffer buf;

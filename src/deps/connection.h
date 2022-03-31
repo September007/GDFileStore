@@ -15,10 +15,12 @@ enum class ConnectionReturnType {
 class InfoForOSD {
 public:
 	string name;
-	string connection_str;
-	InfoForOSD(const string& name="", const string& conn_str="") :name(name), connection_str(conn_str) {}
-	bool operator==(const InfoForOSD& ifs)const { return name == ifs.name && connection_str == ifs.connection_str; }
-	auto GetES() { return make_tuple(&name, &connection_str); }
+	string host;
+	int port;
+	InfoForOSD(const string& name="", const string& host="",int port=0) :name(name), host(host), port(port) {}
+	bool operator==(const InfoForOSD& ifs)const { return name == ifs.name && host == ifs.host && port == ifs.port; }
+	auto GetES() { return make_tuple(&name, &host, &port); }
+	auto GetConnectionstr()const { return fmt::format("{}:{}", host, port); }
 };
 
 inline auto GetOSDConfig(const string& osd_name) {
@@ -30,6 +32,6 @@ inline auto GetOSDConfig(const string& osd_name) {
 		return make_pair<bool, InfoForOSD>(false, InfoForOSD());
 	}
 	else
-		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, fmt::format("{}:{}", host, port)));
+		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, host, port));
 }
 #endif 

@@ -7,6 +7,13 @@
   },
   "configurePresets": [
     {
+      "name": "LAN",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "20"
+      }
+    },
+    {
       "name": "X64",
       "hidden": true,
       "architecture": {
@@ -24,6 +31,7 @@
     },
     {
       "name": "Windows",
+      "inherits": ["LAN"],
       "hidden": true,
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
@@ -33,6 +41,7 @@
     },
     {
       "name": "Linux",
+      "inherits": [ "LAN" ],
       "hidden": true,
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "vendor": {
@@ -73,7 +82,10 @@
         "ASAN_ENABLED": {
           "type": "BOOL",
           "value": "ON"
-        }
+        },
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_CXX_STANDARD": "20"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
