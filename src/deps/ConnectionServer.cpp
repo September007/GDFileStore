@@ -87,7 +87,13 @@ bool FSConnnectionServer::ResponseConfig(FSConnnectionServer* fscs, GDFileStore*
 		auto osd_len = Read<int>(*(buf.get()));
 		auto osds = ReadArray<InfoForOSD>(*(buf.get()), osd_len);
 		auto reload_connection = Read<bool>(*(buf.get()));
-		auto result = fs->HandleWriteOperation(ope, osds);
+		bool result = false;
+		try {
+			 result = fs->HandleWriteOperation(ope, osds);
+		}
+		catch (std::exception& e) {
+			cout << fmt::format("catch error[{}]", e.what());
+		}
 		if (result == true) {
 			res.body = "success";
 		}

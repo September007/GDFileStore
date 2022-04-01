@@ -28,7 +28,7 @@ public:
 	string to_string()const { return fmt::format("h_{}", key); }
 	static Header GetNewHeader(RocksKV* kv);
 	//@follow definition of Header
-	static Header FromTo_string(const string& header_str);
+BOOST_NOINLINE	static Header FromTo_string(const string& header_str);
 	auto GetES() { return make_tuple(&key); }
 };
 // kv interface

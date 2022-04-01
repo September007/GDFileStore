@@ -31,6 +31,8 @@ ConnectionReturnType FSConnnectionClient::WriteAndWaitReturn(
 		return true; // return 'false' if you want to cancel the request.
 		},
 		"text/plain");
+	if (res.error() != Error::Success)
+		return ConnectionReturnType::fail_anyway;
 	httplib::Response r=res.value();
 	auto resultBody = r.body;
 	if (resultBody == "success")
