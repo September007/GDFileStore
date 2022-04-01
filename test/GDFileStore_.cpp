@@ -17,7 +17,7 @@ struct GDFSTest {
 			names.push_back(fmt::format("test{:-03d}" , i));
 			int len = (rando() % 10) + 1;//+1 for set postive
 			string content = "meaningless content:\n";
-			content.reserve(len + 20);
+			content.reserve(len + 20u);
 			while (--len > 0) {
 				content.append(1, char(rando() % 60 + '0'));
 			}
@@ -29,7 +29,7 @@ struct GDFSTest {
 		}
 		for (int i = 0; i < TC; ++i) {
 			auto readContent = g._get_object_data(GHObject_t(HObject_t(Object_t(names[i]))));
-			auto con=contents[i];
+			auto &con=contents[i];
 			auto len0=readContent.length(),len1=con.length();
 			EXPECT_EQ(readContent, contents[i]);
 		}

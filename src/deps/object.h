@@ -144,9 +144,11 @@ public:
 	declare_default_cmp_operator(PageGroup)
 	auto GetES() { return make_tuple(&name, &pool); }
 };
-
-inline auto GetObjDirHashInt(GHObject_t const& ghobj) {
-	return std::to_string(std::hash<string>()(ghobj.hobj.oid.name));
+//get the unique decription str for a ghobj
+inline auto GetObjUniqueStrDesc(GHObject_t const& ghobj) {
+	auto str = fmt::format("{}{:0>}{}{:0>}{:0>}",
+		ghobj.owner, ghobj.hobj.pool, ghobj.hobj.oid.name, ghobj.generation, ghobj.shard_id);
+	return str;
 }
 
 

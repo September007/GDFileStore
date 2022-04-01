@@ -8,10 +8,29 @@
 #include<vector>
 #include<boost/version.hpp>
 #include<GDMutex.h>
+#include<object.h>
+#include<forward_declare.h>
 using std::string;
 using std::vector;
 using std::map;
 
+/* Header , simplify key's length
+* eg: usr0.obj0001.attr0: val0	usr0.obj0001.attr1: val1	usr0.obj0001.attr2: val2
+* could be k001.attr0: val0	k001.attr1: val1 k001.attr2: val2
+*/
+class Header {
+public:
+	uint32_t key;
+	explicit Header(uint32_t k=0) :key(k) {}
+	bool operator<(const Header&)const = default;
+	std::strong_ordering operator<=>(const Header&)const = default;
+	//@follow definition of Header
+	string to_string()const { return fmt::format("h_{}", key); }
+	static Header GetNewHeader(RocksKV* kv);
+	//@follow definition of Header
+	static Header FromTo_string(const string& header_str);
+	auto GetES() { return make_tuple(&key); }
+};
 // kv interface
 // crud boy,ewwww
 //};
@@ -32,6 +51,8 @@ public:
 	virtual vector<KVStatus> SetValues(const vector<pair<key_type, value_type>>& vals)=0;
 	virtual KVStatus RemoveKey(const key_type& key)=0;
 	virtual vector<KVStatus> RemoveKeys(const vector<key_type>& keys)=0;
+
+	auto isDBLoaded(){return is_db_loaded;}
 };
 
 class RocksKV :public KVBase {
@@ -49,6 +70,7 @@ public:
 	//return true if load success
 	bool LoadDB()override;
 	bool UnLoadDB()override;
+	void SetPath(const string &path){storagePath=path;}
 	KVStatus GetValue(const key_type& key, value_type&val) override{
 		auto status = db->Get(rocksdb::ReadOptions(), key, &val);
 		return status;
@@ -85,20 +107,21 @@ public:
 	}
 	vector<pair<key_type, value_type>> GetMatchPrefix(const string& prefix);
 
+
+	//
+	map<GHObject_t, Header> objCacheHeader;
+	map<Header,GHObject_t > reverse_objCacheHeader;
+	//if this obj doesnot have a header, will create it
+	//create ky-pair: GetObjUniqueStrDesc(gh) \to header ,  and  header \to GetObjUniqueStrDesc(gh)
+	Header GetHeader(const GHObject_t& gh);
+	void EraseHeader(const GHObject_t& gh);
+	GHObject_t GetObj(const Header& h);
+	void EraseObj(const Header& h);
 private :
+	Header GetNewHeader();
 	static bool beginWith(const string& pre, const string& str);
 	// note slice does not hold data,it just refer,so keep original data alive
 	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs);
 };
 
-/* Header , simplify key's length
-* eg: usr0.obj0001.attr0: val0	usr0.obj0001.attr1: val1	usr0.obj0001.attr2: val2
-* could be k001.attr0: val0	k001.attr1: val1 k001.attr2: val2
-*/
-class Header {
-	uint32_t key;
-	explicit Header(uint32_t k) :key(k) {}
-	string to_string() { return fmt::format("h{}", key); }
-	static Header GetNewHeader(RocksKV* kv);
-};
 #endif //GDKEYVALUE_HEAD

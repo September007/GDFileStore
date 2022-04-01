@@ -8,7 +8,7 @@ void client_main() {
 	this_thread::sleep_for(chrono::milliseconds(100));
 	shared_ptr<FSConnnectionClient> cli(new FSConnnectionClient);
 	GHObject_t ghobj(HObject_t(Object_t("test_obj"),Snapid_t()), 0, shard_id_t::NO_SHARD());
-	auto x = OperationWrapper::WriteWrapper(ghobj, "tring writing something");
+	auto x = OperationWrapper::WriteWrapper(ghobj, "tring writing something\n");
 	vector<InfoForOSD> osds = {
 		InfoForOSD("target_primary_osd","127.0.0.1",8080)
 	};
@@ -21,6 +21,7 @@ void client_main() {
 void server_main() {
 	shared_ptr<FSConnnectionServer> srv(new FSConnnectionServer);
 	GDFileStore fs("./tmp/http_connection_/fs", "target_primary_osd");
+	EXPECT_TRUE(fs.Mount());
 	srv->listen(&fs);
 	//when srv.listen quit, srv already stop
 }

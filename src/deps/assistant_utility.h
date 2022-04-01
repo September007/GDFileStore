@@ -330,4 +330,5 @@ template<typename T> requires(is_arithmetic_v<T> || is_enum_v<T>)
 void	ReadSequence(buffer& buf, T* t, int len) {
 	buf.drawback(sizeof(T) * len, t);
 }
+
 #endif  // ASSISTANT_UTILITY_HEAD

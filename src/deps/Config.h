@@ -25,7 +25,7 @@ inline json GetConfigFromFile(const string& path) {
 * {name}.json.{name}					overload
 * but this overwrite is over simple ,on in the surface of dirct key of  name
 */
-inline auto GetConfig(const string& name, const string& key, bool reload = false) {
+inline json GetConfig(const string& name, const string& key,const string&default_class="", bool reload = false) {
 	//@FATAL: change root
 	static string configRoot = filesystem::absolute("./../../../src/config").generic_string();
 	static auto  sid = GetConfigFromFile(fmt::format("{}/integrated.default.json", configRoot));
@@ -55,6 +55,9 @@ inline auto GetConfig(const string& name, const string& key, bool reload = false
 		if (!(cache[index])[key].empty()/*id.find(name) != id.end() && id.find(name)->find(key) != id.find(name)->end()*/) {
 			ret = (cache[index])[key];
 		}
+	//read default_class
+	if (ret.empty()&&default_class!="")
+		return GetConfig(default_class, "key", "", reload);
 	return ret;
 }
 #endif //GD_CONFIG_HEAD

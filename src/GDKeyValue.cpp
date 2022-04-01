@@ -1,6 +1,7 @@
 #include<GDKeyValue.h>
 #include<GDMutex.h>
 #include<config.h>
+#include<string>
 using key_type = RocksKV::key_type;
 using value_type= RocksKV::value_type;
 bool RocksKV::LoadDB() {
@@ -40,6 +41,76 @@ vector<pair<key_type, value_type>> RocksKV::GetMatchPrefix(const string& prefix)
 
 }
 
+Header RocksKV::GetNewHeader() {
+	return Header::GetNewHeader(this);
+}
+
+Header RocksKV::GetHeader(const GHObject_t& gh) {
+	auto cache = objCacheHeader.find(gh);
+	if (cache != objCacheHeader.end())return cache->second;
+	string s;
+	auto objuni = GetObjUniqueStrDesc(gh);
+	auto ret = this->GetValue(objuni, s);
+	if (ret.ok()) {
+		buffer b = s;
+		auto h = Read<Header>(b);
+		objCacheHeader[gh] = h;
+		return h;
+	}
+	else {
+		auto h = GetNewHeader();
+		this->SetValue(objuni, h.to_string());
+		this->SetValue(h.to_string(), objuni);
+		objCacheHeader[gh] = h;
+		reverse_objCacheHeader[h] = gh;
+		return h;
+	}
+}
+
+void RocksKV::EraseHeader(const GHObject_t& gh) {
+	auto h = objCacheHeader.find(gh);
+	auto head = h->second;
+	if (h != objCacheHeader.end()) {
+		objCacheHeader.erase(h);
+		reverse_objCacheHeader.erase(head);
+	}
+	this->RemoveKey(GetObjUniqueStrDesc(gh));
+	//even if head is "", remove won't rise error
+	this->RemoveKey(head.to_string());
+}
+
+GHObject_t RocksKV::GetObj(const Header& h) {
+	auto cache = reverse_objCacheHeader.find(h);
+	if (cache != reverse_objCacheHeader.end())return cache->second;
+	string s;
+	auto head = h.to_string();
+	auto ret = this->GetValue(head, s);
+	if (ret.ok()) {
+		buffer b = s;
+		auto gh = Read<GHObject_t>(b);
+		reverse_objCacheHeader[h] = gh;
+		objCacheHeader[gh] = h;
+		return gh;
+	}
+	else {
+		// new header should come from GetHeader,not here
+		LOG_ERROR("Header", fmt::format("try to get the projected object cfrom a Header[],but failed", h.to_string()));
+		return GHObject_t();
+	}
+}
+
+void RocksKV::EraseObj(const Header& h) {
+	auto f = reverse_objCacheHeader.find(h);
+	auto gh = f->second;
+	if (f != reverse_objCacheHeader.end()) {
+		reverse_objCacheHeader.erase(f);
+		objCacheHeader.erase(gh);
+	}
+	//even if gh is default, it's fine
+	this->RemoveKey(GetObjUniqueStrDesc(gh));
+	this->RemoveKey(h.to_string());
+}
+
 bool RocksKV::beginWith(const string& pre, const string& str) {
 	if (pre.size() > str.size())return false;
 	return str.substr(0, pre.size()) == pre;
@@ -60,12 +131,16 @@ Header Header::GetNewHeader(RocksKV* kv) {
 	if (!ret.ok()) {
 		//read config from point-outed config file
 		auto default_header_count = GetConfig("KV", "header_count").get<string>();
-		LOG_INFO("KV", fmt::format("KV[{}] missing header_count, create as[{}] at [{}:{}] "
-			, long(kv), default_header_count, __FILE__, __LINE__));
+		LOG_INFO("KV", fmt::format("KV[{}] missing header_count, create as[{}] "
+			,  long long(kv), default_header_count));
 		head_count = default_header_count;
 	}
 	auto hc = stoull(head_count);
 	head_count = std::to_string(hc + 1);
 	kv->SetValue("header_count", head_count);
 	return Header(hc);
+}
+
+Header Header::FromTo_string(const string& header_str) {
+	return Header(std::stoul(header_str.substr(2)));
 }

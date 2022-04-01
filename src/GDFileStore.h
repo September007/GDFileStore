@@ -1,7 +1,7 @@
 #pragma once
 #ifndef GDFILESTORE_HEAD
 #define GDFILESTORE_HEAD
-#include<sys/stat.h>
+#include<forward_declare.h>
 #include<fstream>
 #include<filesystem>
 #include<fmt/format.h>
@@ -12,6 +12,7 @@
 #include<GDKeyValue.h>
 #include<GDFileJournal.h>
 #include <deps/connection.h>
+#include<projection.h>
 //@Todo: journal
 
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
@@ -59,10 +60,20 @@ public:
 			GetLogger("GDFileStore")->error("load kv db failed when mount[{}].{}:{}", this->path, __FILE__, __LINE__);
 			return false;
 		}
+		if (!journal.Mount(&kv,this)) {
+			GetLogger("GDFileStore")->error("load journal failed when mount[{}].{}:{}", this->path, __FILE__, __LINE__);
+			return false;
+		}
+
 		return true;
 	}
 	auto UnMount() {
-		return kv.UnLoadDB();
+		if(!kv.UnLoadDB()||!journal.UnMount())
+		{
+			LOG_ERROR("GDFileStore",fmt::format("unmount failed"));
+			return false;
+		}
+		return true;
 	}
 	//@new 22-3-25
 	bool HandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
@@ -70,6 +81,10 @@ public:
 	bool PrimaryHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
 	//just do own job
 	bool ReplicaHandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds);
+	//@dataflow journal flush filestore will flush journal when timer call
+	//@mutex journal::access_to_wOpes 
+	//@emergency thread_pool timer to call this every interval
+	void flushJouranl();
 private:
 	//internal interface for object data
 	//file suffix is .txt
@@ -130,10 +145,9 @@ public:
 	//obj path
 	string GetGHObjectStoragePath(const GHObject_t& ghobj) const;
 	
-	/*
-	* something new
-	*/
 	string GetOsdName() { return this->fsname; };
+
+	InfoForOSD GetInfo() { return GetOSDConfig(GetOsdName()).second; }
 };
 
 #endif //GDFILESTORE_HEAD
