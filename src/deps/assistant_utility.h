@@ -70,7 +70,7 @@ inline std::string getTimeStr() {
 template<typename T>
 auto randomValue();
 template<typename T>
-void randomValue(T* t, int len = 1, bool call_des = false);
+void randomValue(T* t, int len = 1, bool call_des = true);
 template<typename T,int n=0>requires is_from_template<tuple,T>
 void _tupleRandomValue(T* t) {
 	if constexpr (n == tuple_size_v<T>)return;
@@ -83,6 +83,9 @@ void _tupleRandomValue(T* t) {
 template<typename T>
 void randomValue(T* t, int len,bool call_des) {
 	static mt19937_64 rando(chrono::system_clock::now().time_since_epoch().count());
+	if (call_des)
+		for (int i = 0; i < len; ++i)
+			(t + i)->~T();
 	using DT = decay_t<T>;
 	if constexpr (is_same_v<decay_t<T>, uint8_t>) {
 		for (int i = 0; i < len; ++i)
@@ -131,7 +134,7 @@ void randomValue(T* t, int len,bool call_des) {
 template<typename T>
 auto randomValue() {
 	uint8_t buf[sizeof(T)];
-	randomValue<T>(reinterpret_cast<T*>(buf), 1);
+	randomValue<T>(reinterpret_cast<T*>(buf), 1, false);
 	return move(*reinterpret_cast<T*>(buf));
 }
 

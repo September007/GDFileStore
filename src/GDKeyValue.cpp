@@ -133,7 +133,7 @@ Header Header::GetNewHeader(RocksKV* kv) {
 		//read config from point-outed config file
 		auto default_header_count = GetConfig("RocksKV", "header_count").get<int>();
 		LOG_INFO("KV", fmt::format("RocksKV[{}] missing header_count, create as[{}] "
-			,  long long(kv), default_header_count));
+			,  (long long)(kv), default_header_count));
 		hc = default_header_count;
 	}
 	else

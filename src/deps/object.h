@@ -94,6 +94,13 @@ struct shard_id_t {
 	static inline shard_id_t NO_SHARD() { return shard_id_t(0); };
 	auto GetES() { return make_tuple(&id); }
 };
+
+namespace boost {
+//@follow difinition of shard_id_t
+	inline size_t hash_value(const shard_id_t&sh) {
+		return boost::hash_value(sh.id);
+	}
+}
 //generation hash object, or the global balah object
 class GHObject_t {
 public:
@@ -126,11 +133,16 @@ public:
 		return make_tuple(&hobj, &generation, &shard_id, &owner);
 	}
 };
+//@follow GHObject_t
 struct HashForGHObject_t {
 	size_t operator()(const GHObject_t& ghobj)const {
 		size_t seed = 0;
-		boost::hash_combine(seed, ghobj.hobj.oid.name);
+		boost::hash_combine(seed, ghobj.owner);
+		boost::hash_combine(seed, ghobj.generation);
+		boost::hash_combine(seed, ghobj.shard_id.id);
 		boost::hash_combine(seed, ghobj.hobj.pool);
+		boost::hash_combine(seed, ghobj.hobj.snap.time_stamp);
+		boost::hash_combine(seed, ghobj.hobj.oid.name);
 		return seed;
 	}
 };
@@ -144,10 +156,11 @@ public:
 	declare_default_cmp_operator(PageGroup)
 	auto GetES() { return make_tuple(&name, &pool); }
 };
+//@follow definition of GHObject_t
 //get the unique decription str for a ghobj
 inline auto GetObjUniqueStrDesc(GHObject_t const& ghobj) {
-	auto str = fmt::format("{}{:0>}{}{:0>}{:0>}",
-		ghobj.owner, ghobj.hobj.pool, ghobj.hobj.oid.name, ghobj.generation, ghobj.shard_id);
+	auto str = fmt::format("{}{:0>}{}{}{:0>}{:0>}",
+		ghobj.owner, ghobj.hobj.pool, ghobj.hobj.oid.name,ghobj.hobj.snap.time_stamp,ghobj.generation, ghobj.shard_id);
 	return str;
 }
 
