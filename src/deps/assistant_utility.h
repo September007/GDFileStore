@@ -41,7 +41,7 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 			__LINE__);
 	}
 }
-#pragma region assert
+#pragma region macro
 #define LOG_ASSERT_TRUE(logName,condi,msg) do { if((condi)!=true) GetLogger(logName)->error(msg" expect true but get false. [{}]at {}:{}"\
         ,#condi,__FILE__,__LINE__);}while(0)
 #define LOG_EXPECT_TRUE(logName,condi) do { if((condi)!=true) GetLogger(logName)->error("expect true but get false. [{}]at {}:{}"\
@@ -55,7 +55,12 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 
 #define LOG_ERROR(logName,msg) do { GetLogger(logName)->error("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
-#define randomDefine x
+#ifndef DebugArea
+#define DebugArea(l,...)  l,##__VA_ARGS__ 
+
+#else
+#define DebugArea()
+#endif
 #pragma endregion
 //Todo: json setting file
 nlohmann::json GetSetting(const string& settingFile);
