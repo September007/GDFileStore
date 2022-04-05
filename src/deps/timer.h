@@ -46,7 +46,6 @@ protected:
 	atomic_bool _shutdown = true;
 	Timer::time_point::duration interval = default_interval;
 public:
-	using Timer = Timer;
 	static constexpr Timer::time_point::duration default_interval = chrono::milliseconds(1);
 
 	_MachineState(Timer::time_point::duration interval):interval(interval){}
@@ -96,7 +95,7 @@ public:
 		_MachineState(*static_cast<const _MachineState*>(&g)), callers(g.callers), access_to_callers() {
 	}
 	//since within the same group, the interval actually doesn't matter
-	auto AddCaller(string callerName,_MachineState::Timer::clock::duration interval=_MachineState::default_interval) { 
+	auto AddCaller(string callerName,Timer::clock::duration interval=_MachineState::default_interval) { 
 		lock_guard lg(access_to_callers);
 		return callers.insert({ callerName,interval});
 	}

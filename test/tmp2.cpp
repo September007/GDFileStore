@@ -1,6 +1,6 @@
 #define head TMP2
 #include<test_head.h>
-#include<fmt\format.h>
+#include<fmt/format.h>
 #include <iostream>
 #include<timer.h>
 using namespace std::chrono;
@@ -25,7 +25,7 @@ TEST(TimerCaller,basic) {
 	constexpr auto tries = 10000;
 	for (int i = tries-1; i>=0; --i) {
 		tc.AddTimer(Timer([i, now, &tc,&sinceNow]() {
-			auto since = TimerCaller::Timer::clock::now() - now;
+			auto since = Timer::clock::now() - now;
 			EXPECT_TRUE(since > sinceNow);
 			sinceNow = chrono::duration_cast<chrono::milliseconds> (since);
 			if (i == tries-1)
