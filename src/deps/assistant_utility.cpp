@@ -115,8 +115,8 @@ catch (std::exception& ex) {
 	return false;
 }
 
-void Error_Exit() {
-	spdlog::default_logger()->error("get error exit,check log for more info");
+void Error_Exit(const string &msg) {
+	spdlog::default_logger()->error("msg:[{}]get error exit,check log for more info",msg);
 	exit(0);
 }
 

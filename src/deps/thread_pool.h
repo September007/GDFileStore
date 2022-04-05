@@ -15,14 +15,22 @@ namespace GD {
     class ThreadPool {
     public:
         explicit ThreadPool(size_t n) : shutdown_(false) {
+            active(n);
+        }
+
+        ThreadPool(const ThreadPool&) = delete;
+        ~ThreadPool() = default;
+
+        void active(size_t n) {
+            shutdown();
+            unique_lock lg(mutex_);
+            shutdown_ = false;
+            threads_.clear();
             while (n) {
                 threads_.emplace_back(worker(*this));
                 n--;
             }
         }
-
-        ThreadPool(const ThreadPool&) = delete;
-        ~ThreadPool() = default;
 
         void enqueue(std::function<void()> fn) {
             std::unique_lock<std::mutex> lock(mutex_);

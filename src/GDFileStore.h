@@ -11,8 +11,9 @@
 #include<deps/object.h>
 #include<GDKeyValue.h>
 #include<GDFileJournal.h>
-#include <deps/connection.h>
+#include<deps/connection.h>
 #include<projection.h>
+#include<timer.h>
 //@Todo: journal
 
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
@@ -40,7 +41,7 @@ private:
 	string path;
 	//journal
 	Journal journal;
-	//public member
+	ConcTimerCaller timercaller;
 public:
 	//@new , count on this to get a specified configuration from  a bunch of files at [/src/config]
 	string fsname;// = "default_fs";
@@ -50,7 +51,7 @@ public:
 	explicit GDFileStore(const string& StorePath,const string &fsName="default_fs");
 	GDFileStore(const GDFileStore&) = delete;
 	GDFileStore(GDFileStore&&) = delete;
-	//attributes interface for GET 
+	~GDFileStore();
 
 	auto get_KVStore() { return &kv; }
 	auto get_path() { return path; }
@@ -64,7 +65,8 @@ public:
 			GetLogger("GDFileStore")->error("load journal failed when mount[{}].{}:{}", this->path, __FILE__, __LINE__);
 			return false;
 		}
-
+		auto conc = GetconfigOverWrite(4, "FileStore", GetOsdName(), "concurrency");
+		timercaller.tp.active(conc);
 		return true;
 	}
 	auto UnMount() {

@@ -14,24 +14,25 @@ inline json GetConfigFromFile(const string& path) {
 		ret = json::parse(f);
 	}
 	catch (std::exception& e) {
-		LOG_ERROR("IO", fmt::format("catch exception[{}]", e.what()));
+		LOG_WARN("IO", fmt::format("read config file [{}]catch exception[{}]", path,e.what()));
 	}
 	return ret;
 }
 /*
+* need check empty before use
 * integrated.default.json.{name}		first
 * integrated.json.{name}				overload
 * {name}.default.json.{name}			overload
 * {name}.json.{name}					overload
 * but this overwrite is over simple ,on in the surface of dirct key of  name
 */
-inline json GetConfig(const string& name, const string& key,const string&default_class="", bool reload = false) {
+inline json GetConfig(const string& name, const string& key, const string& default_class = "", bool reload = false) {
 	//@FATAL: change root
 	static string configRoot = filesystem::absolute("./../../../src/config").generic_string();
 	static auto  sid = GetConfigFromFile(fmt::format("{}/integrated.default.json", configRoot));
 	static auto  si = GetConfigFromFile(fmt::format("{}/integrated.json", configRoot));
 	static map<string, json> cache;
-	json ret = "";
+	json ret;//
 	string indexs[] = {
 		format("integrated.default.{}", name),
 		format("integrated.{}", name),
@@ -56,8 +57,36 @@ inline json GetConfig(const string& name, const string& key,const string&default
 			ret = (cache[index])[key];
 		}
 	//read default_class
-	if (ret.empty()&&default_class!="")
-		return GetConfig(default_class, "key", "", reload);
+	if (ret.empty()) {
+		LOG_WARN("config", fmt::format("get [{}:{}],default:[{}] failed,may try default", name, key, default_class));
+		if (default_class != "") {
+			ret = GetConfig(default_class, key, "", reload);
+			if (ret.empty()) {
+				LOG_WARN("config", fmt::format("get [{}:{}],default:[{}] failed,try default failed too",
+					name, key, default_class));
+			}
+		}
+	}
 	return ret;
+}
+// use this replace directly GetConfig
+template<typename T>
+inline T GetconfigOverWrite(T default_value, const string& default_class, const string& name, const string& key, bool reload = false) {
+	auto r = GetConfig(name, key, default_class, reload);
+	if (r.empty()) {
+		LOG_ERROR("config", fmt::format("can't read the [{}:{}:{}] ,use default {}, but this is not allowd in realtime",
+			default_class, name, key, default_value));
+		return default_value;
+	}
+	else {
+		try {
+			return r.get<T>();
+		}
+		catch (std::exception& e) {
+			LOG_ERROR("config", fmt::format("catch error[{}],when getconfig of [{}:{}:{}]",
+				e.what(), default_class, name, key));
+			return default_value;
+		}
+	}
 }
 #endif //GD_CONFIG_HEAD

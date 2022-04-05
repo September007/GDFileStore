@@ -7,13 +7,17 @@ GDFileStore::GDFileStore(const string& StorePath,const string &fsName) :
 	path(std::filesystem::absolute(StorePath).generic_string()),
 	fsname(fsName),
 	kv(),
-	journal()
+	journal(),
+	timercaller(0)
 {
 	if (!filesystem::is_directory(path))
 		filesystem::create_directories(path);
 	//set submodules root
 	kv.SetPath( GetKVRoot());
 	journal.SetPath( GetJournalRoot());
+}
+GDFileStore::~GDFileStore() { 
+	timercaller.shutdown();
 }
 bool GDFileStore::HandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds) {
 	if (osds.size() == 0) {

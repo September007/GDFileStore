@@ -66,7 +66,7 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 nlohmann::json GetSetting(const string& settingFile);
 string ReadFile(const string& path);
 bool WriteFile(const string& path,	const string& content,	const bool create_parent_dir_if_missing = true);
-void Error_Exit();
+void Error_Exit(const string&msg="");
 std::string getTimeStr(std::string_view fmt);
 inline std::string getTimeStr() {
 	return getTimeStr("%Y-%m-%d %H:%M:%S");

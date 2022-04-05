@@ -25,6 +25,12 @@ public:
 
 inline auto GetOSDConfig(const string& osd_name) {
 	auto http_config = GetConfig(osd_name, "http_server");
+	{
+		if (http_config.empty()) {
+			LOG_ERROR("config", fmt::format("config {}:{} get null", osd_name, "http_server"));
+			Error_Exit();
+		}
+	}
 	auto host = http_config["addr"].get<string>();
 	auto port = http_config["port"].get<int>();
 	if (host == "" || port == int{}) {
