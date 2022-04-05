@@ -4,12 +4,13 @@
 #include<assistant_utility.h>
 #include<chrono>
 #include<list>
+#include<set>
 #include<mutex>
+#include<thread_pool.h>
 class TimerCaller;
 class Timer;
 using TimerTask = function<void(void)>;
 using TimerAfter = function<void(const Timer* t, TimerCaller* tc)>;
-
 class Timer {
 public:
 	using clock = chrono::system_clock;
@@ -19,14 +20,24 @@ public:
 	TimerAfter afterTask;
 	mutable TimerCaller* caller;
 	time_point when;
-	Timer(TimerTask&& task, time_point when, TimerCaller* caller = nullptr,TimerAfter afterTask=nullptr) :
-		task(task), when(when), caller(caller),afterTask(afterTask) { }
+	//support repeatation
+	int repeatation = 0;
+	Timer::clock::duration round = Timer::clock::duration();
+	//repeat timer
+	Timer(const TimerTask task,time_point when, Timer::clock::duration round,int times,const TimerAfter afterTask=nullptr):
+		task(task), when(when), caller(nullptr), afterTask(afterTask),round(round),repeatation(times) {
+		SetRepeat(round, times);
+	}
+	Timer(const TimerTask task, time_point when, TimerCaller* caller = nullptr,
+		const TimerAfter  afterTask=nullptr, Timer::clock::duration round=chrono::milliseconds(0), int repeatation = 1) :
+		task(task), when(when), caller(caller),afterTask(afterTask),repeatation(repeatation),round(round) { }
 	void call() const {
 		if (task != nullptr)
 			task();
 		if(afterTask!=nullptr)
 			afterTask(this, this->caller);
 	}
+	void SetRepeat(Timer::clock::duration round, int times);
 };
 // CRPT based interface ,for the support of active&&shutdown and run,tick
 template<typename T>
@@ -41,20 +52,14 @@ public:
 	_MachineState(Timer::time_point::duration interval):interval(interval){}
 	_MachineState(const _MachineState& m) :_shutdown(m._shutdown.load()), interval(m.interval) {}
 	_MachineState(const _MachineState&& m) :_shutdown(m._shutdown.load()), interval(m.interval) {}
-	bool is_actived() { return !_shutdown.load(); }
-	void active() { _shutdown = false; }
-	void shutdown() { _shutdown = true; }
-	//may need active this before run
-	virtual void run() {
-		while (is_actived()) {
-			static_cast<T*>(this)->Tick();
-			const auto now = Timer::clock::now();
-			using rep = Timer::clock::rep;
-			//precesion on ms
-			auto nextTime = ceil<chrono::duration<int, ratio<1, 1000>>>(now + interval);
-			this_thread::sleep_until(nextTime);
-		}
+	bool is_actived() { 
+		return !_shutdown;
 	}
+	// callergroup is obligated to active and shutdown caller
+	virtual void active() { _shutdown = false; }
+	virtual void shutdown() { _shutdown = true;	}
+	// need active this before run
+	virtual void run();
 	//this may never call
 	virtual void Tick() { static_cast<T*>(this)->Tick(); }
 };
@@ -62,7 +67,7 @@ public:
 class TimerCaller:public _MachineState<TimerCaller> {
 public:
 	list<Timer> timers;
-	mutex accesss_to_timers;
+	recursive_mutex accesss_to_timers;
 	//how long interval is
 	Timer::time_point::duration interval;
 public:
@@ -74,33 +79,12 @@ public:
 	TimerCaller(const TimerCaller& tc) :
 		_MachineState(*static_cast<const _MachineState*>(&tc)),
 		timers(tc.timers), accesss_to_timers() {}
-	void AddTimer(const Timer& t) {
-		lock_guard lg(accesss_to_timers);
-		DebugArea(int foreSize = timers.size());
-		t.caller = this;
-		for (auto it = timers.begin(); it != timers.end(); ++it) {
-			if (it->when > t.when) {
-				timers.insert(it, t);
-				break;
-			}
-			else continue;
-		}
-		DebugArea(LOG_EXPECT_EQ("Timer", timers.size(), foreSize + 1));
-	}
+	void AddTimer(const Timer& t);
 
-	void Tick() override {
-		lock_guard lg(accesss_to_timers);
-		for (auto it = timers.begin(); it != timers.end();) {
-			const auto now = Timer::clock::now();
-			if (now >= it->when) {
-				it->call();
-				auto tmp = it++;
-				timers.erase(tmp);
-			}
-			else
-				break;
-		}
-	}
+	void Tick() override;
+	//set a end timer that will call shutdown when all the timer for now exectuted,
+	//or just shut this down if there have no timer
+	virtual void SetTerminationAtEnd();
 };
 // support caller management and 
 class TimerCallerGroup :public _MachineState<TimerCallerGroup>{
@@ -117,19 +101,57 @@ public:
 		return callers.insert({ callerName,interval});
 	}
 	//check nullptr before use
-	TimerCaller* GetCaller(string name,bool create_if_missing=false){
-		auto x = callers.find(name);
-		if (x != callers.end())
-			return &(x->second);
-		else if (create_if_missing) {
-			auto a= AddCaller(name);
-			if (a.second)
-				return &(a.first->second);
-		}
-		return nullptr;
-	}
+	TimerCaller* GetCaller(string name, bool create_if_missing = false);
 	void Tick() override{
 		for (auto& [name, tc] : callers)
 			tc.Tick();
 	}
+	void active()override;
+	void shutdown()override;
+};
+
+template<typename T>
+inline void _MachineState<T>::run() {
+	while (is_actived()) {
+		static_cast<T*>(this)->Tick();
+		const auto now = Timer::clock::now();
+		using rep = Timer::clock::rep;
+		//precesion on ms
+		auto nextTime = now + ceil<chrono::duration<int, ratio<1, 1000>>>(interval);
+		this_thread::sleep_until(nextTime);
+	}
+}
+
+class ConcTimerCaller :public TimerCaller {
+public:
+	template<typename ...args>
+	ConcTimerCaller(int thread_count, args...ags) :tp(thread_count), TimerCaller(std::forward<args>(ags)...) {}
+
+	void Tick()override {
+		lock_guard lg(accesss_to_timers);
+		for (auto it = timers.begin(); it != timers.end();) {
+			const auto now = Timer::clock::now();
+			//check if shutdown
+			if (now >= it->when && is_actived()) {
+				tp.enqueue([timer = move(*it)](){
+					timer.call();
+				});
+				auto tmp = it++;
+				timers.erase(tmp);
+			}
+			else
+				break;
+		}
+	}
+	//suppose once shutdown,never start again
+	void shutdown()override {
+		TimerCaller::shutdown();
+		tp.shutdown();
+	}
+	int RestJobs() {
+		lock_guard lg(accesss_to_timers);
+		// reduce one of sentinel
+		return timers.size() + tp.workerRunning() - 1;
+	}
+	GD::ThreadPool tp;
 };
