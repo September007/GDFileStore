@@ -5,17 +5,14 @@
 #include<vector>
 using namespace std;
 TEST(filebuffer, all) {
-	vector<int > vi = { 1,2,3,4 };
-	int i = 5;
-	double d = 6.0;
-	buffer b;
-	//auto tp = make_tuple(&vi, &i, &d, &b);
-	//Write(b, &tp);
-	MultiWrite(b, vi, i, d, b);
-	auto rv = Read<vector<int>>(b);
-	auto ri = Read<int>(b);
-	auto rd = Read<double>(b);
-
-	rv[0];
+	class x {
+	public:
+		void add() {
+			std::cout << "ss" << endl;
+		}
+	};
+	x xx;
+	thread t(&x::add, &xx);
+	t.join();
 }
 

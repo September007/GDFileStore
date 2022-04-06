@@ -12,3 +12,7 @@
 ## bugs
 
 1. serialize only design for non-const class,mean when you call Write(buf,const char *) will cause comile error
+
+
+## tips 
+1. search a object in a filestore,maybe need ignore the generation for the fuzzy search

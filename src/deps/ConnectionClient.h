@@ -5,6 +5,8 @@
 #include<httplib.h>
 #include<object.h>
 #include<iostream>
+#include<mutex>
+#include<map>
 using std::string;
 using std::vector;
 using namespace httplib;
@@ -56,6 +58,76 @@ public:
 		return cl.Get(forward<argsType>(args)...);
 	}
 	ConnectionReturnType Read(const GHObject_t& ghobj, Operation r, const InfoForOSD& primary_osd, bool reloadConnection);
+};
+
+// async client
+class AsynClient {
+	InfoForNetNode info;
+	shared_mutex access_to_info;
+
+	//@dataflow opestate store
+	//record the state of ope,trace by opeid which return by writeReq
+	std::map<opeIdType, pair<std::condition_variable, OpeState>> ope_states;
+	mutex access_to_opestates;
+
+	//srv part
+	httplib::Server srv;
+	mutex access_to_srv;
+	thread srv_t;
+	std::atomic_bool srv_shut = false;
+	void srvMain() {
+		{
+			std::unique_lock lg(access_to_srv);
+			auto ret = setup_asyn_client_srv(&srv);
+			LOG_EXPECT_TRUE("asynclient", ret);
+		}
+		while (!srv_shut) {
+			InfoForNetNode info;
+			{
+				std::shared_lock lg(access_to_info);
+				info = this->info;
+			}
+			srv.listen(info.host.c_str(), info.port);
+		}
+	}
+	//server part
+	GD::ThreadPool thread_pool;
+	//handle the response from primary
+	void handleReqWrite(InfoForNetNode from, repType rt, opeIdType opeId);
+	//set up post func
+	bool setup_asyn_client_srv(httplib::Server* srv);
+
+public:
+	AsynClient(const InfoForNetNode& info) :info(info), access_to_info(), access_to_srv(),
+		srv_shut(false), srv_t(&AsynClient::srvMain, this),
+		thread_pool(std::thread::hardware_concurrency()) {
+	}
+	~AsynClient() {
+		shutdown();
+		thread_pool.shutdown();
+	}
+	//shutsown server ,thread
+	void shutdown() {
+		srv_shut = true;
+		{
+			std::unique_lock lg(access_to_srv);
+			srv.stop();
+		}
+		if (srv_t.joinable())
+			srv_t.join();
+	}
+	//return the opeid for the result lookup
+	//@follow http_param pack 1.in AsynClient::asynWrite
+	opeIdType asynWrite(vector<InfoForNetNode> tos, const WOPE& wope);
+
+	//wope result lookup
+	//no block,just get state
+	OpeState getWopeState(opeIdType opeId);
+	//the follow three will block,not suppose use waitWopeBe because it may block always;
+	OpeState waitWopeBe(opeIdType opeId, OpeState be_what);
+	OpeState waitWopeBe_for(opeIdType opeId, OpeState be_what, chrono::system_clock::duration timeout);
+	OpeState waitWopeBe_until(opeIdType opeId, OpeState be_what, chrono::system_clock::time_point deadline);
+
 };
 
 #endif //CONNECTION_CLIENT_HEAD

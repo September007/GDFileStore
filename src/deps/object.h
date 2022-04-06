@@ -256,3 +256,25 @@ public:
 //@Todo.t2 use this!!
 // each operation have a callback
 using OperationCallBackType = std::function<void(Operation*)>;
+
+
+using opeIdType = string;
+
+//@new operation
+class WOPE {
+public:
+	enum class opetype {
+		Insert,Delete
+	};
+	opetype type;
+	GHObject_t ghobj;
+	// for the block support
+	int block_num;
+	string block_data;
+	//support serialize
+	auto GetES() { return make_tuple(&type, &ghobj, &block_num, &block_data); }
+};
+//@follow definition of WOPE
+inline opeIdType GetOpeId(const WOPE& wope) {
+	return fmt::format("{}:{}:{}", wope.type, GetObjUniqueStrDesc(wope.ghobj), wope.block_num);
+}
