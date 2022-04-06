@@ -212,11 +212,6 @@ template<typename T>
 void ReadArray(buffer& buf, T* t, int len);
 
 template<typename T, int n = 0>requires is_from_template<tuple, T>
-void _TupleWrite(buffer& buf, T t);
-template<typename T, int n = 0>requires is_from_template<tuple, T>
-void _TupleRead(buffer& buf, T t);
-
-template<typename T, int n = 0>requires is_from_template<tuple, T>
 void _TupleWrite(buffer& buf, T *t)
 {
 	if constexpr (n == tuple_size_v<T>)return;
@@ -337,6 +332,12 @@ void WriteSequence(buffer& buf, T* t, int len) {
 template<typename T> requires(is_arithmetic_v<T> || is_enum_v<T>)
 void	ReadSequence(buffer& buf, T* t, int len) {
 	buf.drawback(sizeof(T) * len, t);
+}
+
+template<typename ...Args>
+void MultiWrite(buffer& buf, Args&...ags) {
+	auto tp = make_tuple(&(ags)...);
+	Write(buf, &tp);
 }
 
 #endif  // ASSISTANT_UTILITY_HEAD

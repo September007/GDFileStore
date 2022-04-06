@@ -22,7 +22,8 @@ public:
 	auto GetES() { return make_tuple(&name, &host, &port); }
 	auto GetConnectionstr()const { return fmt::format("{}:{}", host, port); }
 };
-
+//network connection node info
+using InfoForNetNode = InfoForOSD;
 inline auto GetOSDConfig(const string& osd_name) {
 	auto http_config = GetConfig(osd_name, "http_server");
 	{
@@ -40,4 +41,24 @@ inline auto GetOSDConfig(const string& osd_name) {
 	else
 		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, host, port));
 }
+enum reqType {
+	clientWrite,
+	primaryWrite,
+	clientRecover,
+	primaryRecover
+};
+enum repType {
+	replicaJounralWrite,
+	replicaDiskWrite,
+	replicaJournalRecover,
+	replicaDiskRecover,
+	primaryJournalWrite,
+	primaryDiskWrite, 
+	primaryJournalRecover,
+	primaryDiskRecover
+};
+bool http_send(InfoForNetNode from, InfoForNetNode to, buffer data);
+bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt);
+bool WriteRep(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, repType rt);
+
 #endif 

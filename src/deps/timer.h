@@ -68,7 +68,6 @@ public:
 	list<Timer> timers;
 	recursive_mutex accesss_to_timers;
 	//how long interval is
-	Timer::time_point::duration interval;
 public:
 	TimerCaller(Timer::time_point::duration interval=default_interval):_MachineState(interval) {
 		// sentinel
