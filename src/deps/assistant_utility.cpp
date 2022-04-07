@@ -10,7 +10,7 @@ shared_ptr<spdlog::logger> GetLogger(const string& name, const bool force_isolat
 	// if missing,create
 	if (ret == nullptr) {
 		{
-			auto logfilename = fmt::format("{}/{}.log", logFileRoot, fileClass);
+			auto logfilename = fmt::format("{}/{}.log", logFileRoot, force_isolate ? name : fileClass);
 			bool create_new = false;
 			ret = spdlog::synchronous_factory::create<
 				spdlog::sinks::basic_file_sink_st>(name, logfilename, false);

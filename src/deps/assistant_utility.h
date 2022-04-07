@@ -49,7 +49,7 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 #define LOG_EXPECT_EQ(logName,l,r) do { if((l)!=(r)) GetLogger(logName)->error("expect equal but not. [{}:{}]!=[{}:{}]at {}:{}"\
         ,#l,l,#r,r,__FILE__,__LINE__);}while(0)
 
-#define LOG_INFO(logName,msg) do { GetLogger(logName)->info("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
+#define LOG_INFO(logName,msg,...) do { GetLogger(logName,##__VA_ARGS__ )->info("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
 #define LOG_WARN(logName,msg) do { GetLogger(logName)->warn("{}: msg at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 

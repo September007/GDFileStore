@@ -290,7 +290,7 @@ public:
 	//serial numbers of blocks 
 	vector<int> blocks;
 	vector<string> datas;
-	ROPE_Result(const GHObject_t& gh, const std::vector<int>& blocks,const vector<string>&datas)
+	ROPE_Result(const GHObject_t& gh = {}, const std::vector<int>& blocks = {}, const vector<string>& datas = {})
 		:ghobj(gh), blocks(blocks),datas(datas) {}
 	ROPE_Result(const ROPE_Result&) = default;
 };

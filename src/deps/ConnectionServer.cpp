@@ -104,3 +104,99 @@ bool FSConnnectionServer::ResponseConfig(FSConnnectionServer* fscs, GDFileStore*
 		});
 	return true;
 }
+
+void AsynServer::srvMain() {
+	{
+		std::unique_lock lg(access_to_srv);
+		auto ret = setup_asyn_server_srv(&srv);
+		LOG_EXPECT_TRUE("asynserver", ret);
+	}
+	while (!srv_shut) {
+		InfoForNetNode info;
+		{
+			std::shared_lock lg(access_to_info);
+			info = this->info;
+		}
+		srv.listen(info.host.c_str(), info.port);
+	}
+}
+
+//two kind of write request, 
+// 1. from client to primary 
+// 2. from parimary to replica
+void AsynServer::handleReqWrite(InfoForNetNode from, vector<InfoForNetNode> tos, 
+	reqType rt, opeIdType opeId, WOPE wope) {
+	switch (rt) {
+		case reqType::Write:
+		{
+			{
+				unique_lock lg(access_to_info);
+				LOG_INFO("asynserver", fmt::format("[svr:[{}]] handle request ClientWrite from [client:[{}]]",
+					info.GetConnectionstr(), from.GetConnectionstr()));
+			}
+			//@emergency to send msg to filestore
+
+		}
+			break;
+		default:
+			LOG_ERROR("asynserver", fmt::format("[svr:[{}]] handle unexpected write request from [cli:[{}]]",
+				info.GetConnectionstr(), from.GetConnectionstr()));
+			break;
+	}
+}
+
+//two kind of read request, 
+// 1. from client to primary 
+// 2. from parimary to replica   this may come from primary's data recover
+void AsynServer::handleReqRead(InfoForNetNode from, vector<InfoForNetNode> tos,
+	reqType rt, opeIdType opeId, ROPE rope) {
+	switch (rt) {
+		case reqType::Read:
+		{
+			{
+				LOG_ERROR("asynserver", fmt::format("[svr:[{}]] handle clientRead request from [cli:[{}]]",
+					info.GetConnectionstr(), from.GetConnectionstr()));
+			}
+			//@emergency to send msg to filestore
+
+		}
+			break;
+		default:
+			LOG_ERROR("asynserver", fmt::format("[svr:[{}]] handle unexpected read request from [cli:[{}]]",
+				info.GetConnectionstr(), from.GetConnectionstr()));
+			break;
+	}
+}
+// 1.from replica to primary
+void AsynServer::handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId) {
+	string repStr;
+	switch (rt) {
+		case repType::replicaJounralWrite:
+			repStr = "replicaJounralWrite";
+			break;
+		case repType::replicaDiskWrite:
+			repStr = "replicaDiskWrite";
+			break;
+		case repType::primaryJournalWrite:
+			repStr = "primaryJournalWrite";
+			break;
+		case repType::primaryDiskWrite:
+			repStr = "primaryDiskWrite";
+			break;
+		default:
+			LOG_ERROR("asynserver", fmt::format("[svr:[{}]] handle unexpected response of write request from [cli:[{}]]",
+				info.GetConnectionstr(), from.GetConnectionstr()));
+			break;
+	}
+	{
+		LOG_ERROR("asynserver", fmt::format("[svr:[{}]] handle {} request from [cli:[{}]]",
+			info.GetConnectionstr(),repStr, from.GetConnectionstr()));
+	}
+}
+
+void AsynServer::handleRepRead(InfoForNetNode from, repType rt, ROPE_Result result) {
+}
+
+bool AsynServer::setup_asyn_server_srv(httplib::Server* srv) {
+	return false;
+}

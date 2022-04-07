@@ -50,21 +50,26 @@ inline auto GetOSDConfig(const string& osd_name) {
 	else
 		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, host, port));
 }
+//@emergency add drawback
 enum class reqType {
-	clientWrite,
-	primaryWrite,
-	clientRecover,
+	Write,  // osd distinguish either it's as primary osd or not by mathcing it's info in incoming  param tos,if it's on first,then it's primary
+	Read,	
+	WriteDrawBack,//drawback work as Write
 	primaryRecover
 };
 enum class repType {
 	replicaJounralWrite,
 	replicaDiskWrite,
-	replicaJournalRecover,
-	replicaDiskRecover,
+	//primary's msg should wait until replica's finish
 	primaryJournalWrite,
 	primaryDiskWrite, 
+
+	replicaJournalRecover,
+	replicaDiskRecover,
 	primaryJournalRecover,
-	primaryDiskRecover
+	primaryDiskRecover,
+
+	primaryRead
 };
 // indicate the process of ope
 enum class WOpeState {
@@ -77,6 +82,10 @@ enum class ROpeState {
 	other,
 	failed,
 	success
+};
+union OpeState {
+	WOpeState wope;
+	ROpeState rope;
 };
 bool http_send(InfoForNetNode from, InfoForNetNode to, buffer data, const string& postname="/http_send");
 //bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt,opeIdType oid);

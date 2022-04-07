@@ -73,44 +73,86 @@ opeIdType AsynClient::asynWrite(vector<InfoForNetNode> tos, const WOPE& wope) {
 		from = this->info;
 	}
 	buffer buf;
-	auto rt=reqType::clientWrite;
+	auto rt=reqType::Write;
 	MultiWrite(buf, from, tos, wope, rt, opeid);
 	auto send_result=http_send(from, tos[0], buf, "/asynWrite");
 	return send_result ? opeid : "";
 }
 
+//@follow http param pack 1.in AsynClient::asynRead from,to,wope,rt,opeid  
+opeIdType AsynClient::asynRead(vector<InfoForNetNode> tos, ROPE rope) {
+	auto opeId = GetOpeId(rope);
+	InfoForNetNode from;
+	{
+		std::shared_lock lg(access_to_info);
+		from = this->info;
+	}
+	buffer buf;
+	auto rt = reqType::Read;
+	MultiWrite(buf, from, tos, rope, rt, opeId);
+	auto send_result = http_send(from, tos[0], buf, "/asynRead");
+	return send_result ? opeId : "";
+}
+
 WOpeState AsynClient::getWopeState(opeIdType opeId) {
 	WOpeState s;
 	{
-		unique_lock lg(access_to_opestates);
-		auto& psc = this->ope_states[opeId];
+		unique_lock lg(access_to_wopestates);
+		auto& psc = this->wope_states[opeId];
 		s = psc.second;
 	}
 	return s;
 }
 
 WOpeState AsynClient::waitWopeBe(opeIdType opeId, WOpeState be_what) {
-	unique_lock lg(access_to_opestates);
-	auto& psc = this->ope_states[opeId];
+	unique_lock lg(access_to_wopestates);
+	auto& psc = this->wope_states[opeId];
 	//@dataflow ope_cv wait
 	psc.first.wait(lg, [&] {return psc.second == be_what; });
 	return psc.second;
 }
 
 WOpeState AsynClient::waitWopeBe_for(opeIdType opeId, WOpeState be_what,chrono::system_clock::duration timeout) {
-	unique_lock lg(access_to_opestates);
-	auto& psc = this->ope_states[opeId];
+	unique_lock lg(access_to_wopestates);
+	auto& psc = this->wope_states[opeId];
 	//@dataflow ope_cv wait
 	psc.first.wait_for(lg, timeout, [be_what, &psc] {return psc.second == be_what; });
 	return psc.second;
 }
 
 WOpeState AsynClient::waitWopeBe_until(opeIdType opeId, chrono::system_clock::time_point deadline) {
-	unique_lock lg(access_to_opestates);
-	auto& psc = this->ope_states[opeId];
+	unique_lock lg(access_to_wopestates);
+	auto& psc = this->wope_states[opeId];
 	//@dataflow ope_cv wait
 	psc.first.wait_until(lg, deadline);
 	return psc.second;
+}
+
+pair<ROpeState, ROPE_Result> AsynClient::getRopeState(opeIdType opeId) {
+	unique_lock lg(access_to_ropestates);
+	auto r = rope_states[opeId].second;
+	return r;
+}
+
+pair<ROpeState, ROPE_Result> AsynClient::waitRope(opeIdType opeId) {
+	unique_lock lg(access_to_ropestates);
+	auto& pcr = rope_states[opeId];
+	pcr.first.wait(lg);
+	return pcr.second;
+}
+
+pair<ROpeState, ROPE_Result> AsynClient::waitRope_for(opeIdType opeId, chrono::system_clock::duration timeout) {
+	unique_lock lg(access_to_ropestates);
+	auto& pcr = rope_states[opeId];
+	pcr.first.wait_for(lg,timeout);
+	return pcr.second;
+}
+
+pair<ROpeState, ROPE_Result> AsynClient::waitRope_until(opeIdType opeId, chrono::system_clock::time_point deadline) {
+	unique_lock lg(access_to_ropestates);
+	auto& pcr = rope_states[opeId];
+	pcr.first.wait_until(lg, deadline);
+	return pcr.second;
 }
 
 void AsynClient::handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId) {
@@ -120,22 +162,37 @@ void AsynClient::handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId
 		//@dataflow ope_cv set and notify
 		case repType::primaryJournalWrite:
 		{
-			unique_lock lg(access_to_opestates);
-			auto& state = ope_states[opeId];
+			unique_lock lg(access_to_wopestates);
+			auto& state = wope_states[opeId];
 			state.second = WOpeState::onJournal;
 			state.first.notify_all();
 			break;
 		}
 		case repType::primaryDiskWrite:
 		{
-			unique_lock lg(access_to_opestates);
-			auto& state = ope_states[opeId];
+			unique_lock lg(access_to_wopestates);
+			auto& state = wope_states[opeId];
 			state.second = WOpeState::onDisk;
 			state.first.notify_all();
 			break;
 		}
 		default:
 			LOG_ERROR("asynclient", fmt::format("this doesn't should recieve reqType[{}] ", int(rt)));
+			break;
+	}
+}
+
+void AsynClient::handleRepRead(InfoForNetNode from, repType rt, opeIdType opeId,ROPE_Result result) {
+	switch (rt) {
+		case repType::primaryRead:
+		{
+			unique_lock lg(access_to_ropestates);
+			auto& pcp = rope_states[opeId];
+			//@emergency unpack
+			pcp.second = make_pair(ROpeState::success, result);
+		}
+			break;
+		default:
 			break;
 	}
 }

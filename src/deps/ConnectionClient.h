@@ -67,8 +67,11 @@ class AsynClient {
 
 	//@dataflow opestate store
 	//record the state of ope,trace by opeid which return by writeReq
-	std::map<opeIdType, pair<std::condition_variable, WOpeState>> ope_states;
-	mutex access_to_opestates;
+	std::map<opeIdType, pair<std::condition_variable, WOpeState>> wope_states;
+	mutex access_to_wopestates;
+
+	std::map<opeIdType, pair<std::condition_variable, pair<ROpeState,ROPE_Result>>> rope_states;
+	mutex access_to_ropestates;
 
 	//srv part
 	httplib::Server srv;
@@ -92,8 +95,9 @@ class AsynClient {
 	}
 	//server part
 	GD::ThreadPool thread_pool;
-	//handle the response from primary
+	//handle the write response from primary
 	void handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId);
+	void handleRepRead(InfoForNetNode from, repType rt, opeIdType opeId, ROPE_Result result);
 	//set up post func
 	bool setup_asyn_client_srv(httplib::Server* srv);
 
@@ -117,20 +121,31 @@ public:
 			srv_t.join();
 	}
 	//return the opeid for the result lookup
+	//need check if the opeid is "",this mean send request failed
 	opeIdType asynWrite(vector<InfoForNetNode> tos, const WOPE& wope);
 
-	opeIdType asynRead(InfoForNetNode to, ROPE rope);
+	//return the opeid for the result lookup
+	//need check if the opeid is "",this mean send request failed
+	//stay the param tos same with asynWrite, in case of expand
+	opeIdType asynRead(vector<InfoForNetNode> tos, ROPE rope);
+
 	//wope result lookup
 	//no block,just get state
 	WOpeState getWopeState(opeIdType opeId);
 	//the follow three will block,not suppose use waitWopeBe because it may block forever;
-
 	//this will return if opestate==(failed|be_what)
 	WOpeState waitWopeBe(opeIdType opeId, WOpeState be_what);
 	WOpeState waitWopeBe_for(opeIdType opeId, WOpeState be_what, chrono::system_clock::duration timeout);
 	WOpeState waitWopeBe_until(opeIdType opeId, chrono::system_clock::time_point deadline);
 
-	
+	//rope result lookup
+	//no block
+	pair<ROpeState, ROPE_Result> getRopeState(opeIdType opeId);
+	//the follow three will block,not suppose use waitRope,beacuse it may block forever
+	//this will return if RopeState==failed for success
+	pair<ROpeState, ROPE_Result> waitRope(opeIdType opeId);
+	pair<ROpeState, ROPE_Result> waitRope_for(opeIdType opeId, chrono::system_clock::duration timeout);
+	pair<ROpeState, ROPE_Result> waitRope_until(opeIdType opeId, chrono::system_clock::time_point deadline);
 };
 
 #endif //CONNECTION_CLIENT_HEAD
