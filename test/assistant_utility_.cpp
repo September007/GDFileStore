@@ -102,7 +102,7 @@ public:
 	float f;
 	string s;
 	bool operator==(const _clsWithStaticInterface& ot) const { return i == ot.i && f == ot.f && s == ot.s; };
-	auto GetES() { return make_tuple(&i, &f, &s); }
+	auto GetES()const  { return make_tuple(&i, &f, &s); }
 };
 class _clsWithMemberInterface {
 public:
@@ -110,7 +110,7 @@ public:
 	float f;
 	string s;
 	bool operator==(const _clsWithMemberInterface& ot) const { return i == ot.i && f == ot.f && s == ot.s; };
-	auto GetES() { return make_tuple(&i, &f, &s); }
+	auto GetES()const  { return make_tuple(&i, &f, &s); }
 };
 TEST(assistant_utility, serialize) {
 	buffer buf;

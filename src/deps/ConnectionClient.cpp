@@ -49,36 +49,22 @@ ConnectionReturnType FSConnnectionClient::Read
 #include<httplib.h>
 #include<assistant_utility.h>
 using namespace fmt;
-//@follow http_param pack 3.in http_send
-bool http_send(InfoForNetNode from, InfoForNetNode to, buffer data, const string& postname) {
-	try {
-		httplib::Client cli(to.GetConnectionstr());
-		buffer package;
-		MultiWrite(package, from, to, data);
-		auto str = package.universal_str();
-		auto ret = cli.Post("/http_send", str.data(), str.length(), "text/plain");
-		return ret.error() == httplib::Error::Success;
-	}
-	catch (std::exception& e) {
-		LOG_ERROR("connection", fmt::format("{} got error [{}]", __func__, e.what()));
-	}
-	return false;
-}
 
-//@follow http_param pack 2.in Write_Req
-bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt, opeIdType oid) {
-	buffer p;
-	MultiWrite(p, tos, data, rt, oid);
-	return http_send(from, tos[0], p, "/writeReq");
-}
+////@follow http_param pack 2.from, tos,rt, oid in Write_Req
+//bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt, opeIdType oid) {
+//	buffer p;
+//	MultiWrite(p,from, tos, data, rt, oid);
+//	return http_send(from, tos[0], p, "/writeReq");
+//}
+//
+////@follow http_param pack 3.in Write_Rep
+//bool WriteRep(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, repType rt, opeIdType oid) {
+//	buffer p; 
+//	MultiWrite(p,tos, data, rt, oid);
+//	return http_send(from, tos[0], p, "/writeRep");
+//}
 
-//@follow http_param pack 3.in Write_Rep
-bool WriteRep(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, repType rt, opeIdType oid) {
-	buffer p; 
-	MultiWrite(p,tos, data, rt, oid);
-	return http_send(from, tos[0], p, "/writeRep");
-}
-
+//@follow http param pack 1.in AsynClient::asynWrite from,tos,wope,rt,opeid  
 opeIdType AsynClient::asynWrite(vector<InfoForNetNode> tos, const WOPE& wope) {
 	auto opeid = GetOpeId(wope);
 	InfoForNetNode from;
@@ -87,22 +73,23 @@ opeIdType AsynClient::asynWrite(vector<InfoForNetNode> tos, const WOPE& wope) {
 		from = this->info;
 	}
 	buffer buf;
-	MultiWrite(buf, tos, wope);
-	WriteReq(from, tos, buf, reqType::clientWrite, opeid);
-	return opeid;
+	auto rt=reqType::clientWrite;
+	MultiWrite(buf, from, tos, wope, rt, opeid);
+	auto send_result=http_send(from, tos[0], buf, "/asynWrite");
+	return send_result ? opeid : "";
 }
 
-OpeState AsynClient::getWopeState(opeIdType opeId) {
-	OpeState s;
+WOpeState AsynClient::getWopeState(opeIdType opeId) {
+	WOpeState s;
 	{
-		shared_lock lg(access_to_opestates);
+		unique_lock lg(access_to_opestates);
 		auto& psc = this->ope_states[opeId];
 		s = psc.second;
 	}
 	return s;
 }
 
-OpeState AsynClient::waitWopeBe(opeIdType opeId, OpeState be_what) {
+WOpeState AsynClient::waitWopeBe(opeIdType opeId, WOpeState be_what) {
 	unique_lock lg(access_to_opestates);
 	auto& psc = this->ope_states[opeId];
 	//@dataflow ope_cv wait
@@ -110,17 +97,15 @@ OpeState AsynClient::waitWopeBe(opeIdType opeId, OpeState be_what) {
 	return psc.second;
 }
 
-OpeState AsynClient::waitWopeBe_for(opeIdType opeId, OpeState be_what,
-	chrono::system_clock::duration timeout) {
+WOpeState AsynClient::waitWopeBe_for(opeIdType opeId, WOpeState be_what,chrono::system_clock::duration timeout) {
 	unique_lock lg(access_to_opestates);
 	auto& psc = this->ope_states[opeId];
 	//@dataflow ope_cv wait
-	psc.first.wait_for(lg, timeout);
+	psc.first.wait_for(lg, timeout, [be_what, &psc] {return psc.second == be_what; });
 	return psc.second;
 }
 
-OpeState AsynClient::waitWopeBe_until(opeIdType opeId, OpeState be_what
-	, chrono::system_clock::time_point deadline) {
+WOpeState AsynClient::waitWopeBe_until(opeIdType opeId, chrono::system_clock::time_point deadline) {
 	unique_lock lg(access_to_opestates);
 	auto& psc = this->ope_states[opeId];
 	//@dataflow ope_cv wait
@@ -128,29 +113,29 @@ OpeState AsynClient::waitWopeBe_until(opeIdType opeId, OpeState be_what
 	return psc.second;
 }
 
-void AsynClient::handleReqWrite(InfoForNetNode from, repType rt, opeIdType opeId) {
+void AsynClient::handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId) {
 	DebugArea(LOG_INFO("asynclient",
 		fmt::format("from[{}], reqType: [{}] , opeId : [{}] ", from.GetConnectionstr(), int(rt), opeId)));
 	switch (rt) {
 		//@dataflow ope_cv set and notify
-		case primaryJournalWrite:
+		case repType::primaryJournalWrite:
 		{
 			unique_lock lg(access_to_opestates);
 			auto& state = ope_states[opeId];
-			state.second = OpeState::onJournal;
+			state.second = WOpeState::onJournal;
 			state.first.notify_all();
 			break;
 		}
-		case primaryDiskWrite:
+		case repType::primaryDiskWrite:
 		{
 			unique_lock lg(access_to_opestates);
 			auto& state = ope_states[opeId];
-			state.second = OpeState::onDisk;
+			state.second = WOpeState::onDisk;
 			state.first.notify_all();
 			break;
 		}
 		default:
-			LOG_ERROR("asynclient", fmt::format("this doesn't should recieve reqType[{}] ", rt));
+			LOG_ERROR("asynclient", fmt::format("this doesn't should recieve reqType[{}] ", int(rt)));
 			break;
 	}
 }
@@ -162,9 +147,8 @@ bool AsynClient::setup_asyn_client_srv(httplib::Server* srv) {
 		srv->Post("/RepWrite", [pthis](const httplib::Request& req, httplib::Response& rep) {
 			buffer buf(req.body);
 			//@follow RepWrite , unpack param as ReqWrite did
-
-			pthis->thread_pool.enqueue([pthis]() {pthis->handleReqWrite()})
-			})
+			//pthis->thread_pool.enqueue([pthis]() {pthis->handleRepWrite()});
+			});
 	}
 	catch (std::exception& e) {
 		LOG_ERROR("asynclient", fmt::format("got error[{}]", e.what()));

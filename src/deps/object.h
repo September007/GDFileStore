@@ -35,7 +35,7 @@ public:
 	//Snapid_t& operator+=(const Snapid_t& t) { this->time_stamp += t.time_stamp; return *this; }
 	//Snapid_t operator+(const Snapid_t& t) { return Snapid_t(this->time_stamp +t.time_stamp ); }
 	operator time_t() { return this->time_stamp; }
-	auto GetES() { return make_tuple(&time_stamp); }
+	auto GetES()const  { return make_tuple(&time_stamp); }
 };
 //
 class Object_t {
@@ -43,7 +43,7 @@ public:
 	string name;
 	Object_t(const string name = "") :name(name) {}
 	declare_default_cmp_operator(Object_t)
-	auto GetES() { return make_tuple(&name); }
+	auto GetES()const  { return make_tuple(&name); }
 };
 //hash object
 // pool is also a hash object
@@ -78,7 +78,7 @@ public:
 	static bool is_meta_pool(int64_t pool) {
 		return pool == POOL_META;
 	}
-	auto GetES() { return make_tuple(&oid, &snap, &hash, &max); }
+	auto GetES()const  { return make_tuple(&oid, &snap, &hash, &max); }
 };
 
 using gen_t = int64_t;
@@ -92,7 +92,7 @@ struct shard_id_t {
 	operator int8_t() const { return id; }
 
 	static inline shard_id_t NO_SHARD() { return shard_id_t(0); };
-	auto GetES() { return make_tuple(&id); }
+	auto GetES()const  { return make_tuple(&id); }
 };
 
 namespace boost {
@@ -129,7 +129,7 @@ public:
 	// get literal description of object
 	//@Follow:GHObject_t definition
 	string GetLiteralDescription(GHObject_t const& ghobj);
-	auto GetES() {
+	auto GetES()const  {
 		return make_tuple(&hobj, &generation, &shard_id, &owner);
 	}
 };
@@ -154,7 +154,7 @@ public:
 	PageGroup(const string& name = "", uint64_t _pool = 1) :name(name), pool(_pool) {}
 	PageGroup(const string&& name) :name(name) {}
 	declare_default_cmp_operator(PageGroup)
-	auto GetES() { return make_tuple(&name, &pool); }
+	auto GetES()const  { return make_tuple(&name, &pool); }
 };
 //@follow definition of GHObject_t
 //get the unique decription str for a ghobj
@@ -192,7 +192,7 @@ public:
 	}
 	FilePos(const FilePos&) = default;
 	declare_default_cmp_operator(FilePos)
-	auto GetES() { return make_tuple(&fileAnchor, &offset); }
+	auto GetES()const  { return make_tuple(&fileAnchor, &offset); }
 };
 class Operation {
 public:
@@ -227,7 +227,7 @@ public:
 	static shared_ptr<buffer> GetBufferFromSlices(const vector<Slice>& slices, int indicated_length = 0);
 	static int GetFilePos(const Operation ope, int endPos);
 	// support for serialize
-	auto GetES() { return make_tuple(&operationType, &data, &obj, &filePos); }
+	auto GetES()const  { return make_tuple(&operationType, &data, &obj, &filePos); }
 };
 
 class OperationWrapper {
@@ -272,9 +272,37 @@ public:
 	int block_num;
 	string block_data;
 	//support serialize
-	auto GetES() { return make_tuple(&type, &ghobj, &block_num, &block_data); }
+	auto GetES()const  { return make_tuple(&type, &ghobj, &block_num, &block_data); }
+};
+
+class ROPE {
+public:
+	GHObject_t ghobj;
+	//serial numbers of blocks 
+	vector<int> blocks;
+	ROPE(const GHObject_t& gh, const std::vector<int> &blocks) :ghobj(gh), blocks(blocks) {}
+	auto GetES()const  { return make_tuple(&ghobj, &blocks); }
+};
+//result of read ope
+class ROPE_Result {
+public:
+	GHObject_t ghobj;
+	//serial numbers of blocks 
+	vector<int> blocks;
+	vector<string> datas;
+	ROPE_Result(const GHObject_t& gh, const std::vector<int>& blocks,const vector<string>&datas)
+		:ghobj(gh), blocks(blocks),datas(datas) {}
+	ROPE_Result(const ROPE_Result&) = default;
 };
 //@follow definition of WOPE
 inline opeIdType GetOpeId(const WOPE& wope) {
-	return fmt::format("{}:{}:{}", wope.type, GetObjUniqueStrDesc(wope.ghobj), wope.block_num);
+	//add time_stamp
+	auto time_stamp = chrono::system_clock::now().time_since_epoch().count();
+	return fmt::format("{}:{}:{}:{}", int(wope.type), GetObjUniqueStrDesc(wope.ghobj), wope.block_num, time_stamp);
+}
+//@follow definition of ROPE
+inline opeIdType GetOpeId(const ROPE& rope) {
+	//add time_stamp
+	auto time_stamp = chrono::system_clock::now().time_since_epoch().count();
+	return fmt::format("{}:{}", GetObjUniqueStrDesc(rope.ghobj), time_stamp);
 }

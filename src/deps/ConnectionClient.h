@@ -67,7 +67,7 @@ class AsynClient {
 
 	//@dataflow opestate store
 	//record the state of ope,trace by opeid which return by writeReq
-	std::map<opeIdType, pair<std::condition_variable, OpeState>> ope_states;
+	std::map<opeIdType, pair<std::condition_variable, WOpeState>> ope_states;
 	mutex access_to_opestates;
 
 	//srv part
@@ -93,7 +93,7 @@ class AsynClient {
 	//server part
 	GD::ThreadPool thread_pool;
 	//handle the response from primary
-	void handleReqWrite(InfoForNetNode from, repType rt, opeIdType opeId);
+	void handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId);
 	//set up post func
 	bool setup_asyn_client_srv(httplib::Server* srv);
 
@@ -117,17 +117,20 @@ public:
 			srv_t.join();
 	}
 	//return the opeid for the result lookup
-	//@follow http_param pack 1.in AsynClient::asynWrite
 	opeIdType asynWrite(vector<InfoForNetNode> tos, const WOPE& wope);
 
+	opeIdType asynRead(InfoForNetNode to, ROPE rope);
 	//wope result lookup
 	//no block,just get state
-	OpeState getWopeState(opeIdType opeId);
-	//the follow three will block,not suppose use waitWopeBe because it may block always;
-	OpeState waitWopeBe(opeIdType opeId, OpeState be_what);
-	OpeState waitWopeBe_for(opeIdType opeId, OpeState be_what, chrono::system_clock::duration timeout);
-	OpeState waitWopeBe_until(opeIdType opeId, OpeState be_what, chrono::system_clock::time_point deadline);
+	WOpeState getWopeState(opeIdType opeId);
+	//the follow three will block,not suppose use waitWopeBe because it may block forever;
 
+	//this will return if opestate==(failed|be_what)
+	WOpeState waitWopeBe(opeIdType opeId, WOpeState be_what);
+	WOpeState waitWopeBe_for(opeIdType opeId, WOpeState be_what, chrono::system_clock::duration timeout);
+	WOpeState waitWopeBe_until(opeIdType opeId, chrono::system_clock::time_point deadline);
+
+	
 };
 
 #endif //CONNECTION_CLIENT_HEAD

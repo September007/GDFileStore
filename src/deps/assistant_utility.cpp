@@ -133,12 +133,12 @@ std::string getTimeStr(std::string_view fmt) {
 Slice:: Slice(const string& str) :data(make_shared<buffer>(str)), start(0), end(str.size()) {
 }
 
-void Slice::Read(buffer& buf, Slice* sli) {
-	new(&sli->data)shared_ptr<buffer>(make_shared<buffer>());
+void Slice::Read(buffer& buf,const Slice* sli) {
+	new(&const_cast<Slice*>(sli)->data)shared_ptr<buffer>(make_shared<buffer>());
 	::Read(buf, &sli->data->data);
 }
 
-void Slice::Write(buffer& buf, Slice* s) {
+void Slice::Write(buffer& buf,const Slice* s) {
 	if (s->data != nullptr)
 		::Write(buf, &s->data->data);
 	else {

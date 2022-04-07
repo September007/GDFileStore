@@ -28,7 +28,7 @@ public:
 	int port;
 	InfoForOSD(const string& name="", const string& host="",int port=0) :name(name), host(host), port(port) {}
 	bool operator==(const InfoForOSD& ifs)const { return name == ifs.name && host == ifs.host && port == ifs.port; }
-	auto GetES() { return make_tuple(&name, &host, &port); }
+	auto GetES()const  { return make_tuple(&name, &host, &port); }
 	auto GetConnectionstr()const { return fmt::format("{}:{}", host, port); }
 };
 //network connection node info
@@ -50,13 +50,13 @@ inline auto GetOSDConfig(const string& osd_name) {
 	else
 		return make_pair<bool, InfoForOSD>(true, InfoForOSD(osd_name, host, port));
 }
-enum reqType {
+enum class reqType {
 	clientWrite,
 	primaryWrite,
 	clientRecover,
 	primaryRecover
 };
-enum repType {
+enum class repType {
 	replicaJounralWrite,
 	replicaDiskWrite,
 	replicaJournalRecover,
@@ -67,13 +67,19 @@ enum repType {
 	primaryDiskRecover
 };
 // indicate the process of ope
-enum OpeState {
+enum class WOpeState {
 	other,
+	failed,
 	onJournal,
 	onDisk
 };
+enum class ROpeState {
+	other,
+	failed,
+	success
+};
 bool http_send(InfoForNetNode from, InfoForNetNode to, buffer data, const string& postname="/http_send");
-bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt,opeIdType oid);
-bool WriteRep(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, repType rt,opeIdType oid);
+//bool WriteReq(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, reqType rt,opeIdType oid);
+//bool WriteRep(InfoForNetNode from, vector<InfoForNetNode> tos, buffer data, repType rt,opeIdType oid);
 
 #endif 

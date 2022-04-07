@@ -155,12 +155,12 @@ public:
 		data.append(len, '\0');
 		memcpy(data.data() + data.size() - len, src, len);
 	}
-	void drawback(int len, void* des) {
-		memcpy(des, data.data() + offset, len);
+	void drawback(int len,const void* des) {
+		memcpy(const_cast<void*>(des), data.data() + offset, len);
 		offset += len;
 	}
 	string universal_str() { return data; }
-	auto GetES() { return make_tuple(&data, &offset); }
+	auto GetES()const   { return make_tuple(&data, &offset); }
 };
 
 class Slice {
@@ -194,10 +194,10 @@ public:
 			return Slice(data, this->start + _start, this->end);
 	}
 	// support for serilize and rando
-	static void Read(buffer& buf, Slice* sli);
-	static void Write(buffer& buf, Slice* s);
-	static void RandomValue(Slice* sli) { new(&sli->data)shared_ptr<buffer>(make_shared<buffer>()); }
-	auto GetES() { return make_tuple(&start, &end); }
+	static void Read(buffer& buf,const Slice* sli);
+	static void Write(buffer& buf,const Slice* s);
+	static void RandomValue(const Slice* sli) { new(&const_cast<Slice*>(sli)->data)shared_ptr<buffer>(make_shared<buffer>()); }
+	auto GetES()const   { return make_tuple(&start, &end); }
 };
 
 template< typename T>
@@ -233,26 +233,27 @@ void _TupleRead(buffer& buf, T *t)
 template< typename T>
 void Write(buffer& buf, T* t) {
 	constexpr int TLEN = sizeof(T);
-	if constexpr (is_arithmetic_v<T> || is_enum_v<T>) {
+	using DT = std::decay_t<T>;
+	if constexpr (is_arithmetic_v<DT> || is_enum_v<DT>) {
 		buf.append(TLEN, (void*)t);
 	}
-	else if constexpr (is_same_v<string, decay_t<T>>) {
+	else if constexpr (is_same_v<string, decay_t<DT>>) {
 		int len = t->length();
 		buf.append(sizeof(int), &len);
 		buf.append(len * sizeof(char), t->data());
 	}
-	else if constexpr (requires(T _t) { _t.GetES(); }) {
+	else if constexpr (requires(DT _t) { _t.GetES(); }) {
 		auto es = t->GetES();
 		_TupleWrite(buf, &es);
 		// more action ,may for shared_ptr<T> balabalah
-		if constexpr (requires(T t) { T::Write(declval<buffer&>(), &t); T::Read(declval<buffer&>(), &t); }) {
+		if constexpr (requires(DT t) { DT::Write(declval<buffer&>(), &t); DT::Read(declval<buffer&>(), &t); }) {
 			T::Write(buf, t);
 		}
 	}
-	else if constexpr (is_from_template<tuple, T>) {
+	else if constexpr (is_from_template<tuple, DT>) {
 		_TupleWrite(buf, t);
 	}
-	else if constexpr (is_from_template<vector, T>) {
+	else if constexpr (is_from_template<vector, DT>) {
 		int sz = t->size();
 		buf.append(sizeof(sz), &sz);
 		WriteArray(buf, &(*t)[0], sz);

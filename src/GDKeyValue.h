@@ -29,7 +29,7 @@ public:
 	static Header GetNewHeader(RocksKV* kv);
 	//@follow definition of Header
 BOOST_NOINLINE	static Header FromTo_string(const string& header_str);
-	auto GetES() { return make_tuple(&key); }
+	auto GetES()const  { return make_tuple(&key); }
 };
 // kv interface
 // crud boy,ewwww
