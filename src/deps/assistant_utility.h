@@ -23,6 +23,7 @@
 #include <random>
 #include <type_traits>
 #include <vector>
+#include<list>
 #include<memory>
 using namespace std;
 template<template<typename...args>typename templateType, typename T>
@@ -57,8 +58,10 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 
 #ifndef DebugArea
 #define DebugArea(l,...)  l,##__VA_ARGS__ 
-
+#define ReleaseArea(l,...)
 #else
+#define DebugArea(l,...)  
+#define ReleaseArea(l,...) l,##__VA_ARGS__ 
 #define DebugArea()
 #endif
 #pragma endregion
@@ -258,6 +261,12 @@ void Write(buffer& buf, T* t) {
 		buf.append(sizeof(sz), &sz);
 		WriteArray(buf, &(*t)[0], sz);
 	}
+	else if constexpr (is_from_template<list, T>) {
+		int sz = t->size();
+		buf.append(sizeof(sz), &sz);
+		for (auto& e : *t)
+			Write(buf, &e);
+	}
 	else if constexpr (is_same_v<T, T>) {
 		static_assert(!is_same_v<T, T>, "can't found right imple");
 		LOG_ERROR("integrated", "can't found suited imple of write");
@@ -295,7 +304,7 @@ void Read(buffer& buf, T* t) {
 			T::Read(buf, t);
 		}
 	}
-	else if constexpr (is_from_template<tuple,T>){
+	else if constexpr (is_from_template<tuple, T>) {
 		_TupleRead(buf, t);
 	}
 	else if constexpr (is_from_template<vector, T>) {
@@ -304,10 +313,20 @@ void Read(buffer& buf, T* t) {
 		new(t)T(sz);
 		ReadArray(buf, &(*t)[0], sz);
 	}
+	else if constexpr (is_from_template<list, T>) {
+		int sz;
+		buf.drawback(sizeof(sz), &sz);
+		new(t)T();
+		while (sz--) {
+			auto r = Read<T::value_type>(buf);
+			t->push_back(r);
+		}
+	}
 	else if constexpr (is_same_v<T, T>) {
 		static_assert(!is_same_v<T, T>, "can't found right imple");
 	}
 }
+
 template<typename T>
 void WriteArray(buffer& buf, T* t, int len) {
 	for (int i = 0; i < len; ++i)
@@ -340,5 +359,15 @@ void MultiWrite(buffer& buf, Args&...ags) {
 	auto tp = make_tuple(&(ags)...);
 	Write(buf, &tp);
 }
-
+template<typename T>
+string as_string(T& t) {
+	buffer b;
+	Write(b, &t);
+	return b.universal_str();
+}
+template<typename T>
+T from_string(const string& str) {
+	buffer b(str);
+	return Read<T>(b);
+}
 #endif  // ASSISTANT_UTILITY_HEAD

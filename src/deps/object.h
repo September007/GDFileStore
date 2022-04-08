@@ -4,6 +4,7 @@
 #include<assistant_utility.h>
 #include<boost/functional/hash.hpp>
 #include<fmt/format.h>
+#include<referedBlock.h>
 #define declare_default_cmp_operator(cls)			   \
 bool operator <(const cls&)const = default;	   \
 bool operator ==(const cls&)const = default;	   \
@@ -132,7 +133,9 @@ public:
 	auto GetES()const  {
 		return make_tuple(&hobj, &generation, &shard_id, &owner);
 	}
+	using Attr_Type = ObjectWithRB;
 };
+
 //@follow GHObject_t
 struct HashForGHObject_t {
 	size_t operator()(const GHObject_t& ghobj)const {
@@ -253,9 +256,7 @@ public:
 		return Operation(ghobj, OperationType::Insert, Slice(data), FilePos(0, FileAnchor::end));
 	}
 };
-//@Todo.t2 use this!!
-// each operation have a callback
-using OperationCallBackType = std::function<void(Operation*)>;
+
 
 
 using opeIdType = string;
@@ -264,15 +265,17 @@ using opeIdType = string;
 class WOPE {
 public:
 	enum class opetype {
-		Insert,Delete
+		Insert,Delete,OverWrite
 	};
 	opetype type;
 	GHObject_t ghobj;
+	//@new new ghobj of new version
+	GHObject_t new_ghobj;
 	// for the block support
 	int block_num;
 	string block_data;
 	//support serialize
-	auto GetES()const  { return make_tuple(&type, &ghobj, &block_num, &block_data); }
+	auto GetES()const  { return make_tuple(&type, &ghobj,&new_ghobj, &block_num, &block_data); }
 };
 
 class ROPE {

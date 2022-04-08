@@ -4,13 +4,16 @@
 #define head TMP
 #include<vector>
 #include<connection.h>
+#include<GDKeyValue.h>
 using namespace std;
 TEST(filebuffer, all) {
-	WOPE wope;
-	wope.block_data = "Dasdads";
-	wope.block_num = 1;
-	
-	auto x = move(wope);
-	x.block_num++;
+	RocksKV kv;
+	kv.LoadDB();
+	GHObject_t gh(HObject_t(Object_t("name"),1),2,shard_id_t(3));
+	GHObject_t::Attr_Type attr;
+	attr.serials_list = { 1,2,3 };
+	kv.SetAttr(gh, attr);
+	auto at=kv.GetAttr(gh);
+	auto l = at.serials_list;
 }
 

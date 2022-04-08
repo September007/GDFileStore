@@ -14,8 +14,8 @@
 #include<deps/connection.h>
 #include<projection.h>
 #include<timer.h>
-//@Todo: journal
-
+#include<referedBlock.h>
+#pragma region old
 //for PageGroup and Object,the default value of them  means those are meaningless or illegal
 template<typename T>
 	requires is_default_constructible_v<decay_t<T>>
@@ -150,6 +150,31 @@ public:
 	string GetOsdName() { return this->fsname; };
 
 	InfoForOSD GetInfo() { return GetOSDConfig(GetOsdName()).second; }
+
+
+
+
+#pragma endregion 
+	//@new for block storage
+	
+	GD::ThreadPool tp;
+	//refered blocks path root
+	string GetReferedBlockRootPath() {
+		return fmt::format("{}/rb", this->path);
+	}
+	//read
+
+	//ObjectWithRB GetObjectWithRBForGHObj(const GHObject_t& ghobj);
+	//ObjectWithRB CreateObjectWithRBForGHObj(const GHObject_t& ghobj);
+
+//	string ReadGHObj(const GHObject_t& ghoj);
+	ROPE_Result ReadGHObj(const GHObject_t& ghoj, ROPE rope);
+
+	//handle request
+	void handleReadGHObj(const GHObject_t& ghoj,InfoForNetNode from);
+	void handleModifyGHObj(const GHObject_t& ghobj, const GHObject_t& new_ghobj,
+		WOPE wope, InfoForNetNode from,vector<InfoForNetNode> tos, reqType rt);
+	
 };
 
 #endif //GDFILESTORE_HEAD

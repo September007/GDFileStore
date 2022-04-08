@@ -10,6 +10,7 @@
 #include<GDMutex.h>
 #include<object.h>
 #include<forward_declare.h>
+#include<object.h>
 using std::string;
 using std::vector;
 using std::map;
@@ -60,7 +61,9 @@ public:
 	rocksdb::DB* db = nullptr;
 	string storagePath = "";
 	//here if storagePath is empty, gcc::filesystem::absolute will cause error
-	RocksKV(const string& storagePath="/tmp/rockskv_tmp") :storagePath(filesystem::absolute(storagePath).string()) {}
+	RocksKV(const string& storagePath="/tmp/rockskv_tmp") :storagePath(filesystem::absolute(storagePath).string()) 
+	//,type_headers() 
+	{ }
 	~RocksKV() {
 		if (db) {
 			db->Close();
@@ -107,16 +110,63 @@ public:
 	}
 	vector<pair<key_type, value_type>> GetMatchPrefix(const string& prefix);
 
-
 	//
-	map<GHObject_t, Header> objCacheHeader;
-	map<Header,GHObject_t > reverse_objCacheHeader;
+	std::map<GHObject_t, Header> objCacheHeader;
+	std::map<Header,GHObject_t > reverse_objCacheHeader;
 	//if this obj doesnot have a header, will create it
 	//create ky-pair: GetObjUniqueStrDesc(gh) \to header ,  and  header \to GetObjUniqueStrDesc(gh)
 	Header GetHeader(const GHObject_t& gh);
 	void EraseHeader(const GHObject_t& gh);
-	GHObject_t GetObj(const Header& h);
+	GHObject_t GetObj (const Header& h);
 	void EraseObj(const Header& h);
+
+	//@new for the object attributes storage
+
+	//get the type_header
+	using header_key = decltype(declval<type_info>().name());
+	std::map<header_key, string> type_headers;
+	std::mutex access_to_type__headers;
+	template<typename T>
+	header_key GetTypeHeader_Key() {
+		using DT = decay_t<T>;
+		return typeid(DT).name();
+	}
+	template<typename T=int>
+	string GetTypeHeader();
+
+	template<typename T=int>
+	string Get_Key(T t) {
+		using DT = decay_t<T>;
+		if constexpr (is_arithmetic_v<DT>||is_enum_v<DT>){
+			return as_string(t);
+		}else
+		if constexpr (requires (DT dt) { dt.GetKey(); })
+		{
+			auto key = t.GetKey();
+			return as_string(key);
+		}
+		else if constexpr (requires(DT dt) {	dt.GetES();	})
+		{
+			auto key = t.GetES();
+			return as_string(key);
+		}
+		else if constexpr (is_same_v<T, T>) {
+			static_assert(!is_same_v<T, T>, "");
+		}
+	}
+	template<typename T=int>
+	void SetAttr(T& t,T::Attr_Type attr) {
+		auto key = Get_Key(t);
+		auto val = as_string(attr);
+		SetValue(key, val);
+	}
+	template<typename T=int>
+	T::Attr_Type GetAttr(T& t) {
+		auto key = Get_Key(t);
+		string attr;
+		GetValue(key, attr);
+		return from_string<T::Attr_Type>(attr);
+	}
 private :
 	Header GetNewHeader();
 	static bool beginWith(const string& pre, const string& str);
@@ -124,4 +174,22 @@ private :
 	static vector<rocksdb::Slice> _turn_Slice(const vector<std::string>& strs);
 };
 
+
+template<typename T>
+inline string RocksKV::GetTypeHeader() {
+	using DT = decay_t<T>;
+	header_key hk = GetTypeHeader_Key<DT>();
+	auto p = type_headers.find(hk);
+	if (p != type_headers.end())
+		return p.second;
+	else {
+		std::unique_lock lg(access_to_type__headers);
+		//default header
+		string default_header = typeid(DT).raw_name();
+		//if find RocksKV[default_header],use it or use default_header
+		auto header = GetconfigOverWrite(default_header, "universal_header", "RocksKV", default_header);
+		type_headers[hk] = header;
+		return header;
+	}
+}
 #endif //GDKEYVALUE_HEAD

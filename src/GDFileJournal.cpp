@@ -83,8 +83,8 @@ void Journal::_flushProcessor() {
 		//@dataflow journal create
 		//create journal here
 		//just record journal object name
-		auto h = kv->GetHeader(obj);
-		kv->SetValue(format("{}{}",this->log_journal_head,h.to_string()), "");
+		//auto h = kv->GetHeader(obj);
+		//kv->SetValue(format("{}{}",this->log_journal_head,h.to_string()), "");
 		//log operation up to kv
 		//kv->SetValue("", "");
 		//@Todo : operation callback
