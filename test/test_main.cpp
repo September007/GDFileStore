@@ -2,6 +2,8 @@
 #include<gtest/gtest.h>
 #include<iostream>
 #include<deps/mem.h>
+#include<stdlib.h>
+
 int main() {
 #ifdef __SANITIZE_ADDRESS__
 	printf("Address sanitizer enabled\n");

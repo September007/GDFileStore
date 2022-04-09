@@ -90,7 +90,7 @@ opeIdType AsynClient::asynRead(vector<InfoForNetNode> tos, ROPE rope) {
 	buffer buf;
 	auto rt = reqType::Read;
 	MultiWrite(buf, from, tos, rope, rt, opeId);
-	auto send_result = http_send(from, tos[0], buf, "/asynRead");
+	auto send_result = http_send(from, tos[0], buf, "/reqRead");
 	return send_result ? opeId : "";
 }
 
@@ -189,7 +189,8 @@ void AsynClient::handleRepRead(InfoForNetNode from, repType rt, opeIdType opeId,
 			unique_lock lg(access_to_ropestates);
 			auto& pcp = rope_states[opeId];
 			//@emergency unpack
-			pcp.second = make_pair(ROpeState::success, result);
+			pcp.second = make_pair(ROpeState::success, move(result));
+			pcp.first.notify_all();
 		}
 			break;
 		default:
@@ -215,6 +216,20 @@ bool AsynClient::setup_asyn_client_srv(httplib::Server* srv) {
 				pthis->handleRepWrite(from, rt, opeId);
 				});
 			});
+		//dataflow request repRead
+		srv->Post("/repRead", [pthis](const httplib::Request & req, httplib::Response & rep) {
+			buffer buf(req.body);
+			//@dataflow RepWrite , unpack param as ReqWrite did
+			auto _from = Read<InfoForNetNode>(buf);
+			auto _to = Read<InfoForNetNode>(buf);
+			auto http_data = Read<buffer>(buf);
+
+			auto result = Read<ROPE_Result>(http_data);
+			pthis->thread_pool.enqueue([pthis = pthis, from = move(_from), result = move(result)]{
+				pthis->handleRepRead(from,repType::primaryRead,result.opeId,result);
+				});
+			_from.GetConnectionstr();
+		});
 		return true;
 	}
 	catch (std::exception& e) {

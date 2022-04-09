@@ -29,7 +29,7 @@ void Journal::SetPath(const string& path) {
 void Journal::SetKV(RocksKV* kv) {
 	this->kv = kv;
 }
-void Journal::SetFS(GDFileStore* kv) {
+void Journal::SetFS(GDFileStore* fs) {
 	this->fs = fs;
 }
 pair<bool,string> Journal::ReadObject(const GHObject_t& gh) {

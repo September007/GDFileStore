@@ -11,7 +11,9 @@
 using namespace std;
 class Journal {
 public:
-	Journal(const string& storagePath = "") { SetPath(storagePath); }
+	Journal(const string& storagePath = "") {
+		SetPath(storagePath);
+	}
 	//@Todo bloom filter for current journal found
 	//note: storagePath need to be set before
 	//need kv to load info

@@ -287,7 +287,7 @@ public:
 	//serial numbers of blocks 
 	vector<int> blocks;
 	ROPE(const GHObject_t& gh, const std::vector<int> &blocks) :ghobj(gh), blocks(blocks) {}
-	auto GetES()const  { return make_tuple(&ghobj, &blocks); }
+	auto GetES()  { return make_tuple(&ghobj, &blocks); }
 };
 //result of read ope
 class ROPE_Result {

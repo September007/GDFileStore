@@ -222,6 +222,20 @@ bool AsynServer::setup_asyn_server_srv(httplib::Server* srv) {
 				WOpeLog opelog(opeId, wope, from, WOpeLog::wope_state_Type::init);
 				pthis->fs.add_wope(move(opelog));
 				});
+			srv->Post("/reqRead", [pthis = pthis](const httplib::Request& req, httplib::Response& rep) {
+				buffer buf(req.body);
+				//any data come from http_send all should be unpack like this
+				auto _from = Read<InfoForNetNode>(buf);
+				auto _to = Read<InfoForNetNode>(buf);
+				auto http_send_data = Read<buffer>(buf);
+
+				auto from = Read<InfoForNetNode>(http_send_data);
+				auto tos = Read<vector<InfoForNetNode>>(http_send_data);
+				auto rope = Read<ROPE>(http_send_data);
+				auto rt = Read<reqType>(http_send_data);
+				auto opeId = Read<opeIdType>(http_send_data);
+				pthis->fs.add_rope(ROpeLog(opeId, rope, from));
+				});
 			return true;
 		}
 		catch (std::exception& e) {

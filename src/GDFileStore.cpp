@@ -2,18 +2,33 @@
 #include"GDFileStore.h"
 using  file_object_data_type=GDFileStore::file_object_data_type;
 using KVStore_type=GDFileStore::KVStore_type;
+inline auto GetParentStr(string& path) {
+	DebugArea(auto abpath = filesystem::absolute(path); LOG_EXPECT_EQ("IO", abpath.string(), path));
+	for (int i = path.size() - 1; i >= 0; --i)
+		if (path[i] != '/' && path[i] != '\\')
+			path.pop_back();
+		else break;
+	return path;
+}
 #pragma region old
-GDFileStore::GDFileStore(const string& StorePath,const string &fsName) :
+GDFileStore::GDFileStore(const string& StorePath, const string& fsName) :
 	path(std::filesystem::absolute(StorePath).generic_string()),
 	fsname(fsName),
-	kv(GetKVRoot(),true),
-	journal(GetJournalRoot()),
+	kv(),
+	journal(),
 	timercaller(thread::hardware_concurrency()),
-	universal_tp(1),//(thread::hardware_concurrency()),
+	universal_tp(3),//(thread::hardware_concurrency()),
 	write_tp(thread::hardware_concurrency()),
 	read_tp(thread::hardware_concurrency()),
-	handle_ope_thread(&GDFileStore::handle_ope_threadMain,this)
+	handle_ope_thread()
 {
+	journal.SetPath(GetJournalRoot());
+	kv.SetPath(GetKVRoot());
+	LOG_EXPECT_TRUE("filestore", Mount());
+	{
+		thread t(&GDFileStore::handle_ope_threadMain, this);
+		handle_ope_thread.swap(t);
+	}
 	if (!filesystem::is_directory(path))
 		filesystem::create_directories(path);
 	auto conc = GetconfigOverWrite(8, "FileStore", GetOsdName(), "concurrency");
@@ -205,7 +220,10 @@ void GDFileStore::do_wope(WOpeLog wopelog) {
 				if (rb_attr.refer_count == 1) {
 					auto from_path = GetReferedBlockStoragePath(rb_attr, GetJournalRBRoot());
 					auto to_path= GetReferedBlockStoragePath(rb_attr, GetRBRoot());
-					filesystem::copy(from_path, to_path);
+					auto to_parent = GetParentStr(to_path);
+					if (!filesystem::exists(to_parent))
+						filesystem::create_directories(to_parent);
+					filesystem::copy(from_path, to_parent);
 				}
 			}
 			wopelog.wope_state = WOpeLog::wope_state_Type::onDisk;

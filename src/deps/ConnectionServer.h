@@ -112,9 +112,13 @@ public:
 
 	AsynServer(const InfoForNetNode& info,const string& StorePath, const string& fsName = "default_fs")
 		:info(info), access_to_info(), access_to_srv(),
-		srv_shut(false), srv_t(&AsynServer::srvMain, this),
+		srv_shut(false), srv_t(),
 		thread_pool(std::thread::hardware_concurrency()),
 		fs(StorePath,fsName) {
+			{
+				thread tmp(&AsynServer::srvMain, this);
+				srv_t.swap(tmp);
+			}
 		if (!fs.Mount())
 			Error_Exit();
 	}
