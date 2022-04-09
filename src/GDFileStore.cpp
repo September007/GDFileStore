@@ -6,20 +6,29 @@ using KVStore_type=GDFileStore::KVStore_type;
 GDFileStore::GDFileStore(const string& StorePath,const string &fsName) :
 	path(std::filesystem::absolute(StorePath).generic_string()),
 	fsname(fsName),
-	kv(),
-	journal(),
-	timercaller(0),
-	tp(thread::hardware_concurrency()),
-	handle_wope_thread(&GDFileStore::handle_wope_threadMain,this)
+	kv(GetKVRoot(),true),
+	journal(GetJournalRoot()),
+	timercaller(thread::hardware_concurrency()),
+	universal_tp(1),//(thread::hardware_concurrency()),
+	write_tp(thread::hardware_concurrency()),
+	read_tp(thread::hardware_concurrency()),
+	handle_ope_thread(&GDFileStore::handle_ope_threadMain,this)
 {
 	if (!filesystem::is_directory(path))
 		filesystem::create_directories(path);
-	//set submodules root
-	kv.SetPath( GetKVRoot());
-	journal.SetPath( GetJournalRoot());
+	auto conc = GetconfigOverWrite(8, "FileStore", GetOsdName(), "concurrency");
+	timercaller.tp.active(conc);
+	//timercaller run in universal_tp
+	universal_tp.enqueue([pthis = this] {pthis->timercaller.run(); });
+	LOG_EXPECT_TRUE("filestore", Mount());
 }
 GDFileStore::~GDFileStore() { 
+	//shutdown threadpools,even them can be shutdown in deconstruct
+	//shut timercaller first,cuz timercaller is run in univeral_tp
 	timercaller.shutdown();
+	universal_tp.shutdown();
+	write_tp.shutdown();
+	read_tp.shutdown();
 	_shut_handle_wope_thread();
 	auto p = this;
 }
@@ -129,22 +138,34 @@ string GDFileStore::GetGHObjectStoragePath(const GHObject_t& ghobj) const {
 //
 //}
 
-void GDFileStore::handle_wope_threadMain() {
+void GDFileStore::handle_ope_threadMain() {
 	auto pthis = this;
-	while (!shut_handle_wope_thread) {
-		list<WOpeLog> tmp;
+	while (!shut_handle_ope_thread) {
+		list<WOpeLog> wtmp;
+		list<ROpeLog> rtmp;
 		{
 			unique_lock lg(access_to_wope_logs);
-			tmp.swap(wope_logs);
+			wtmp.swap(wope_logs);
 		}
-		if (tmp.size() == 0)
-			this_thread::sleep_for(chrono::milliseconds(1));
+		if (wtmp.size() == 0)
+			;// this_thread::sleep_for(chrono::milliseconds(1));
 		else {
-			for (auto& wope : tmp) {
-				pthis->tp.enqueue([pthis = pthis, wo = move(wope)]{
+			for (auto& wope : wtmp) {
+				pthis->write_tp.enqueue([pthis = pthis, wo = move(wope)]{
 					pthis->do_wope(wo);
 					});
 			}
+		}
+		{
+			unique_lock lg(access_to_rope_logs);
+			rtmp.swap(rope_logs);
+		}
+		if (rtmp.size() == 0);
+		else {
+			for (auto& rope : rtmp)
+				pthis->read_tp.enqueue([pthis = pthis, ro = move(rope)]{
+					pthis->do_rope(ro);
+					});
 		}
 	}
 }
@@ -201,6 +222,29 @@ void GDFileStore::do_wope(WOpeLog wopelog) {
 		default:
 			break;
 	};
+}
+
+void GDFileStore::add_rope(ROpeLog ropelog) {
+	unique_lock lg(access_to_rope_logs);
+	rope_logs.push_back(move(ropelog));
+}
+
+void GDFileStore::do_rope(ROpeLog ropelog) {
+	//rope
+	auto &rope = ropelog.rope;
+	auto gh_attr = kv.GetAttr(rope.ghobj).first;
+	vector<string> block_datas(rope.blocks.size());
+	//load as vector for simpfiying indexing
+	vector<decay_t<decltype(gh_attr.serials_list.front())>> serials;
+	for (auto s : gh_attr.serials_list)
+		serials.push_back(s);
+	for (int i = 0; i < rope.blocks.size(); ++i)
+		block_datas[i] = ReadReferedBlock(serials[rope.blocks[i]], GetRBRoot());
+	ROPE_Result result(ropelog.opeId,ropelog.rope.ghobj, ropelog.rope.blocks, move(block_datas));
+	//@dataflow request repRead pack
+	buffer buf;
+	MultiWrite(buf, result);
+	http_send(GetInfo(), ropelog.from, buf, "/repRead");
 }
 
 ReferedBlock GDFileStore::addNewReferedBlock(string data,string root_path) {

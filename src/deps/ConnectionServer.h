@@ -70,6 +70,9 @@ protected:
 };
 
 class AsynServer {
+	//to init this first 
+	//filestore
+	GDFileStore fs;
 	//server info
 	InfoForNetNode info;
 	shared_mutex access_to_info;
@@ -91,8 +94,6 @@ class AsynServer {
 	//list<pair<ROPE, callback>> ropes;
 	//mutex access_to_opes;
 
-	//filestore
-	GDFileStore fs;
 
 	//1.client to primary
 	//2.primary to replica

@@ -9,7 +9,7 @@ mutex m_;
 condition_variable cv;
 bool svr_quit = false;
 void cliMain() {
-	this_thread::sleep_for(chrono::milliseconds(100));
+	//this_thread::sleep_for(chrono::milliseconds(100));
 	AsynClient cli(cli_info);
 	auto gh = GHObject_t(HObject_t(Object_t("ghobj")), 1);
 	auto new_gh = gh; new_gh.generation++;

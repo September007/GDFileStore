@@ -35,10 +35,13 @@ public:
 
 	// private member data
 private:
-	//objects attributes data
-	KVStore_type kv;
+	//	if use member initialize list to init kv,journal,etc. in that case ,
+	//  need declare path at first,cuz in the initialize order is definition order
+	// https://en.cppreference.com/w/cpp/language/constructor
 	//local filesystem store path for objects data
 	string path;
+	//objects attributes data
+	KVStore_type kv;
 	//journal
 	Journal journal;
 	ConcTimerCaller timercaller;
@@ -65,8 +68,6 @@ public:
 			GetLogger("GDFileStore")->error("load journal failed when mount[{}].{}:{}", this->path, __FILE__, __LINE__);
 			return false;
 		}
-		auto conc = GetconfigOverWrite(4, "FileStore", GetOsdName(), "concurrency");
-		timercaller.tp.active(conc);
 		return true;
 	}
 	auto UnMount() {
@@ -165,24 +166,32 @@ public:
 #pragma endregion 
 	//@new for block storage
 	
-	GD::ThreadPool tp;
+	//universal thread pool for anything
+	GD::ThreadPool universal_tp;
+	//@new@todo more professional working thread,for further optimize may coruntinue??
+	GD::ThreadPool read_tp;
+	GD::ThreadPool write_tp;
 	//refered blocks path root
 	string GetReferedBlockRootPath() {
 		return fmt::format("{}/rb", this->path);
 	}
-	//write
+	//logs
 	list<WOpeLog> wope_logs;
 	std::mutex access_to_wope_logs;
-	thread handle_wope_thread;
-	atomic_bool shut_handle_wope_thread = false;
-	void handle_wope_threadMain();
+	list<ROpeLog> rope_logs;
+	std::mutex access_to_rope_logs;
+	thread handle_ope_thread;
+	atomic_bool shut_handle_ope_thread = false;
+	void handle_ope_threadMain();
 	void _shut_handle_wope_thread() { 
-		shut_handle_wope_thread = true; 
-		if(handle_wope_thread.joinable())
-			handle_wope_thread.join();
+		shut_handle_ope_thread = true; 
+		if(handle_ope_thread.joinable())
+			handle_ope_thread.join();
 	}
 	void add_wope(WOpeLog wopelog);
 	void do_wope(WOpeLog wopelog);
+	void add_rope(ROpeLog ropelog);
+	void do_rope(ROpeLog ropelog);
 	//ObjectWithRB GetObjectWithRBForGHObj(const GHObject_t& ghobj);
 	//ObjectWithRB CreateObjectWithRBForGHObj(const GHObject_t& ghobj);
 	ReferedBlock addNewReferedBlock(string data, string root_path);

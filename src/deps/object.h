@@ -292,13 +292,17 @@ public:
 //result of read ope
 class ROPE_Result {
 public:
+	opeIdType opeId;
 	GHObject_t ghobj;
 	//serial numbers of blocks 
 	vector<int> blocks;
 	vector<string> datas;
-	ROPE_Result(const GHObject_t& gh = {}, const std::vector<int>& blocks = {}, const vector<string>& datas = {})
-		:ghobj(gh), blocks(blocks),datas(datas) {}
+	ROPE_Result(opeIdType opeId="", const GHObject_t& gh = {}, const std::vector<int>& blocks = {}, const vector<string>& datas = {})
+		:opeId(opeId), ghobj(gh), blocks(blocks),datas(datas) {}
 	ROPE_Result(const ROPE_Result&) = default;
+
+	auto GetES() { return make_tuple(&opeId, &ghobj, &blocks, &datas); }
+	auto GetKey() { return make_tuple(&opeId); }
 };
 
 class WOpeLog {
@@ -314,6 +318,20 @@ public:
 	auto GetES() { return make_tuple(&opeId, &wope,&from, &wope_state); }
 	auto GetKey() { return make_tuple(&opeId); }
 	using Attr_Type = WOpeLog;
+};
+
+class ROpeLog {
+public:
+	opeIdType opeId;
+	ROPE rope;
+	InfoForNetNode from;
+
+	ROpeLog(opeIdType opeId, ROPE rope, InfoForNetNode from) :
+		opeId(opeId), rope(rope), from(from) {
+	}
+	auto GetES() { return make_tuple(&opeId, &rope, &from); }
+	auto GetKey() { return make_tuple(&opeId); }
+	using Attr_Type = ROpeLog;
 };
 //@follow definition of WOPE
 inline opeIdType GetOpeId(const WOPE& wope) {

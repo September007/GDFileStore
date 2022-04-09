@@ -61,9 +61,12 @@ public:
 	rocksdb::DB* db = nullptr;
 	string storagePath = "";
 	//here if storagePath is empty, gcc::filesystem::absolute will cause error
-	RocksKV(const string& storagePath="/tmp/rockskv_tmp") :storagePath(filesystem::absolute(storagePath).string()) 
+	RocksKV(const string& storagePath="/tmp/rockskv_tmp",bool mount_immediately=false) :storagePath(filesystem::absolute(storagePath).string()) 
 	//,type_headers() 
-	{ }
+	{
+		if (mount_immediately)
+			LOG_EXPECT_TRUE("rocksKV", LoadDB());
+	}
 	~RocksKV() {
 		if (db) {
 			db->Close();
