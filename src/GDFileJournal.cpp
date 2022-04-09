@@ -100,3 +100,50 @@ inline void Journal::_AddWriteOperation(const vector<Operation>& wOpe) {
 	lock_guard lg(GetMutex<Journal*, string>(this, "wOpes"));
 	wOpes.insert(wOpes.end(), wOpe.begin(), wOpe.end());
 }
+
+//@dataflow wope_log journal write
+void Journal::do_WOPE(WOpeLog wopelog) {
+	auto& wope = wopelog.wope;
+	auto prb = kv->GetAttr(wope.ghobj);
+	auto& orb = prb.first;
+	if (!prb.second) {
+		//initial it
+		orb.serials_list = {};
+	}
+	for (int i = 0; i < wope.block_nums.size(); ++i) {
+		auto block_num = wope.block_nums[i];
+		auto& block_data = wope.block_datas[i];
+		auto opetype = wope.types[i];
+		auto p = orb.serials_list.begin();
+		for (int k = 0; k < block_num; ++k)p++;
+		switch (opetype) {
+			case WOPE::opetype::Delete:
+			{
+				orb.serials_list.erase(p);
+			}break;
+			case WOPE::opetype::Insert:
+			{
+				//@dataflow kv rb create
+				auto newRb = fs->addNewReferedBlock(block_data, fs->GetJournalRBRoot());
+				orb.serials_list.insert(p, newRb.serial);
+				kv->SetAttr(newRb, newRb);
+			}break;
+			case WOPE::opetype::OverWrite:
+			{
+				auto newRb = fs->addNewReferedBlock(block_data, fs->GetJournalRBRoot());
+				*p = newRb.serial;
+				kv->SetAttr(newRb, newRb);
+			}break;
+		}
+	}
+	//@dataflow kv rb modify refer_count
+	for(auto &rb:orb.serials_list)
+	{
+		auto rrb = ReferedBlock(rb);
+		auto rb_attr = kv->GetAttr(rrb);
+		rb_attr.first.refer_count++;
+		kv->SetAttr(rrb, rb_attr.first);
+	}
+	//@dataflow kv gh create gh:orb
+	kv->SetAttr(wopelog.wope.new_ghobj, orb);
+}

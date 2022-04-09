@@ -6,7 +6,6 @@
 #include<vector>
 #include<list>
 #include<connection.h>
-#include<object.h>
 #include<thread>
 #include<GDFileStore.h>
 #include<config.h>
@@ -120,7 +119,6 @@ public:
 	}
 	~AsynServer() {
 		shutdown();
-		thread_pool.shutdown();
 	}
 	//shutsown server ,thread
 	void shutdown() {
@@ -131,6 +129,7 @@ public:
 		}
 		if (srv_t.joinable())
 			srv_t.join();
+		thread_pool.shutdown();
 	}
 };
 #endif //CONNECTION_SERVER_HEAD

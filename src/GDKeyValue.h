@@ -138,20 +138,20 @@ public:
 	string Get_Key(T t) {
 		using DT = decay_t<T>;
 		if constexpr (is_arithmetic_v<DT>||is_enum_v<DT>){
-			return as_string(t);
+			return GetTypeHeader<T>()+as_string(t);
 		}else
 		if constexpr (requires (DT dt) { dt.GetKey(); })
 		{
 			auto key = t.GetKey();
-			return as_string(key);
+			return GetTypeHeader<T>() + as_string(key);
 		}
 		else if constexpr (requires(DT dt) {	dt.GetES();	})
 		{
 			auto key = t.GetES();
-			return as_string(key);
+			return GetTypeHeader<T>() + as_string(key);
 		}
 		else if constexpr (is_same_v<T, T>) {
-			static_assert(!is_same_v<T, T>, "");
+			static_assert(!is_same_v<T, T>, "this type have not right header definition");
 		}
 	}
 	template<typename T=int>
@@ -161,11 +161,13 @@ public:
 		SetValue(key, val);
 	}
 	template<typename T=int>
-	T::Attr_Type GetAttr(T& t) {
+	std::pair<typename T::Attr_Type,bool> GetAttr(const T& t) {
 		auto key = Get_Key(t);
 		string attr;
 		GetValue(key, attr);
-		return from_string<T::Attr_Type>(attr);
+		if (!attr.empty())
+			return { from_string<T::Attr_Type>(attr),true };
+		else return { T::Attr_Type(),false };
 	}
 private :
 	Header GetNewHeader();
@@ -181,7 +183,7 @@ inline string RocksKV::GetTypeHeader() {
 	header_key hk = GetTypeHeader_Key<DT>();
 	auto p = type_headers.find(hk);
 	if (p != type_headers.end())
-		return p.second;
+		return p->second;
 	else {
 		std::unique_lock lg(access_to_type__headers);
 		//default header

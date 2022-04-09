@@ -5,6 +5,7 @@
 #include<boost/functional/hash.hpp>
 #include<fmt/format.h>
 #include<referedBlock.h>
+#include<connection.h>
 #define declare_default_cmp_operator(cls)			   \
 bool operator <(const cls&)const = default;	   \
 bool operator ==(const cls&)const = default;	   \
@@ -267,15 +268,17 @@ public:
 	enum class opetype {
 		Insert,Delete,OverWrite
 	};
-	opetype type;
+	vector<opetype> types;
+	// for the block support
+	vector<int> block_nums;
+	vector<string> block_datas;
 	GHObject_t ghobj;
 	//@new new ghobj of new version
 	GHObject_t new_ghobj;
-	// for the block support
-	int block_num;
-	string block_data;
+	WOPE(GHObject_t gh,GHObject_t new_gh, vector<opetype> types,vector<int> block_nums,vector<string> block_datas)
+		: types(types), block_nums(block_nums), block_datas(block_datas), ghobj(gh), new_ghobj(new_gh){}
 	//support serialize
-	auto GetES()const  { return make_tuple(&type, &ghobj,&new_ghobj, &block_num, &block_data); }
+	auto GetES()  { return make_tuple(&types, &ghobj,&new_ghobj, &block_nums, &block_datas); }
 };
 
 class ROPE {
@@ -297,11 +300,26 @@ public:
 		:ghobj(gh), blocks(blocks),datas(datas) {}
 	ROPE_Result(const ROPE_Result&) = default;
 };
+
+class WOpeLog {
+public:
+	opeIdType opeId;
+	WOPE wope;
+	InfoForNetNode from;
+	enum class wope_state_Type {
+		other, init,onJournal, onDisk
+	} wope_state;
+	WOpeLog(opeIdType opeId,WOPE wope,InfoForNetNode from,wope_state_Type wope_state):
+		opeId(opeId),wope(wope),from(from),wope_state(wope_state){ }
+	auto GetES() { return make_tuple(&opeId, &wope,&from, &wope_state); }
+	auto GetKey() { return make_tuple(&opeId); }
+	using Attr_Type = WOpeLog;
+};
 //@follow definition of WOPE
 inline opeIdType GetOpeId(const WOPE& wope) {
 	//add time_stamp
 	auto time_stamp = chrono::system_clock::now().time_since_epoch().count();
-	return fmt::format("{}:{}:{}:{}", int(wope.type), GetObjUniqueStrDesc(wope.ghobj), wope.block_num, time_stamp);
+	return fmt::format("{}:{}:{}", GetObjUniqueStrDesc(wope.ghobj), GetObjUniqueStrDesc(wope.new_ghobj), time_stamp);
 }
 //@follow definition of ROPE
 inline opeIdType GetOpeId(const ROPE& rope) {

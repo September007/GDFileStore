@@ -51,4 +51,10 @@ private:
 	// may need mutex access wOpes
 	inline void _AddWriteOperation(const Operation& wOpe);
 	inline void _AddWriteOperation(const vector<Operation>& wOpe);
+
+
+
+public:
+	void do_WOPE(WOpeLog wopelog);
+
 };

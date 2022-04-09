@@ -10,7 +10,7 @@ public:
 	//as a unique in range of whole storage system
 	int64_t serial;
 	int32_t refer_count;
-	ReferedBlock(int64_t serial, int32_t refer_count=0) :serial(serial), refer_count(refer_count) {}
+	ReferedBlock(int64_t serial=0, int32_t refer_count=0) :serial(serial), refer_count(refer_count) {}
 	static ReferedBlock getNewReferedBlock() {
 		//this just create a increment serial for observe
 		return ReferedBlock{ chrono::system_clock::now().time_since_epoch().count(),0 };
@@ -57,4 +57,3 @@ inline void WriteReferedBlock(ReferedBlock rb, string root_path,string data) {
 	auto path = GetReferedBlockStoragePath(rb, root_path);
 	WriteFile(path, data);
 }
-

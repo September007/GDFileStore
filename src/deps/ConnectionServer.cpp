@@ -22,7 +22,8 @@ void FSConnnectionServer::listen(GDFileStore* fs) {
 		LOG_ERROR("server", fmt::format("server::listen get error[{}]", e.what()));
 	}
 	access_to_is_running.unlock();
-	x.join();
+	if(x.joinable())
+		x.join();
 }
 
 void FSConnnectionServer::stop() {
@@ -117,7 +118,8 @@ void AsynServer::srvMain() {
 			std::shared_lock lg(access_to_info);
 			info = this->info;
 		}
-		srv.listen(info.host.c_str(), info.port);
+		bool b=srv.listen(info.host.c_str(), info.port);
+		LOG_EXPECT_TRUE("asyn", b);
 	}
 }
 
@@ -197,6 +199,34 @@ void AsynServer::handleRepWrite(InfoForNetNode from, repType rt, opeIdType opeId
 void AsynServer::handleRepRead(InfoForNetNode from, repType rt, ROPE_Result result) {
 }
 
+//@emergency0
 bool AsynServer::setup_asyn_server_srv(httplib::Server* srv) {
-	return false;
+	if (!srv)
+		return false;
+	else {
+		try {
+			auto pthis = this;
+			srv->Post("/reqWrite", [pthis = pthis](const httplib::Request& req, httplib::Response& rep) {
+				buffer buf(req.body);
+				//any data come from http_send all should be unpack like this
+				auto _from = Read<InfoForNetNode>(buf);
+				auto _to = Read<InfoForNetNode>(buf);
+				auto http_send_data = Read<buffer>(buf);
+
+				auto from = Read<InfoForNetNode>(http_send_data);
+				auto tos = Read<vector<InfoForNetNode>>(http_send_data);
+				auto wope = Read<WOPE>(http_send_data);
+				auto rt = Read<reqType>(http_send_data);
+				auto opeId = Read<opeIdType>(http_send_data);
+				//@dataflow opelog create
+				WOpeLog opelog(opeId, wope, from, WOpeLog::wope_state_Type::init);
+				pthis->fs.add_wope(move(opelog));
+				});
+			return true;
+		}
+		catch (std::exception& e) {
+			LOG_ERROR("asyn", fmt::format("catch error [{}]", e.what()));
+			return false;
+		}
+	}
 }

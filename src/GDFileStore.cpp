@@ -9,7 +9,8 @@ GDFileStore::GDFileStore(const string& StorePath,const string &fsName) :
 	kv(),
 	journal(),
 	timercaller(0),
-	tp(thread::hardware_concurrency())
+	tp(thread::hardware_concurrency()),
+	handle_wope_thread(&GDFileStore::handle_wope_threadMain,this)
 {
 	if (!filesystem::is_directory(path))
 		filesystem::create_directories(path);
@@ -19,6 +20,8 @@ GDFileStore::GDFileStore(const string& StorePath,const string &fsName) :
 }
 GDFileStore::~GDFileStore() { 
 	timercaller.shutdown();
+	_shut_handle_wope_thread();
+	auto p = this;
 }
 bool GDFileStore::HandleWriteOperation(const Operation& wope, const vector<InfoForOSD>& osds) {
 	if (osds.size() == 0) {
@@ -125,6 +128,87 @@ string GDFileStore::GetGHObjectStoragePath(const GHObject_t& ghobj) const {
 //	auto rd = ReadReferedBlock(rb, GetReferedBlockRootPath());
 //
 //}
+
+void GDFileStore::handle_wope_threadMain() {
+	auto pthis = this;
+	while (!shut_handle_wope_thread) {
+		list<WOpeLog> tmp;
+		{
+			unique_lock lg(access_to_wope_logs);
+			tmp.swap(wope_logs);
+		}
+		if (tmp.size() == 0)
+			this_thread::sleep_for(chrono::milliseconds(1));
+		else {
+			for (auto& wope : tmp) {
+				pthis->tp.enqueue([pthis = pthis, wo = move(wope)]{
+					pthis->do_wope(wo);
+					});
+			}
+		}
+	}
+}
+//@dataflow wope_log add to task list
+void GDFileStore::add_wope(WOpeLog wopelog) {
+	unique_lock lg(access_to_wope_logs);
+	wope_logs.push_back(move(wopelog));
+}
+
+//@dataflow wope_log do it
+void GDFileStore::do_wope(WOpeLog wopelog) {
+	auto& wope = wopelog.wope;
+	switch (wopelog.wope_state) {
+		case WOpeLog::wope_state_Type::init:
+		{//write journal
+			journal.do_WOPE(wopelog);
+			//@dadaflow reqWrite::journalWrite
+			buffer buf;
+			auto from = this->GetInfo();
+			auto rt = repType::primaryJournalWrite;
+			MultiWrite(buf, from, rt, wopelog.opeId);
+			//@dataflow request repWrite
+			http_send(this->GetInfo(), wopelog.from, buf, "/repWrite");
+			//@dataflow wopelog change init to obJournal
+			wopelog.wope_state = WOpeLog::wope_state_Type::onJournal;
+			add_wope(move(wopelog));
+		}break;
+		case WOpeLog::wope_state_Type::onJournal:
+		{//move journal data to disk
+			//move new referedblocks to disk root
+			//how to define new?,when these rb record as refer_count==1 mean new
+			auto ngh = wope.new_ghobj;
+			auto porb = kv.GetAttr(ngh);
+			for (auto& rbs : porb.first.serials_list) {
+				auto rb = ReferedBlock(rbs);
+				auto rb_attr = kv.GetAttr(rb).first;
+				if (rb_attr.refer_count == 1) {
+					auto from_path = GetReferedBlockStoragePath(rb_attr, GetJournalRBRoot());
+					auto to_path= GetReferedBlockStoragePath(rb_attr, GetRBRoot());
+					filesystem::copy(from_path, to_path);
+				}
+			}
+			wopelog.wope_state = WOpeLog::wope_state_Type::onDisk;
+			add_wope(move(wopelog));
+		}break;
+		case WOpeLog::wope_state_Type::onDisk:
+		{//@dataflow repWrite pack 
+			buffer buf;
+			auto from = this->GetInfo();
+			auto rt = repType::primaryDiskWrite;
+			MultiWrite(buf, from, rt, wopelog.opeId);
+			http_send(this->GetInfo(), wopelog.from, move(buf), "/repWrite");
+		}break;
+		default:
+			break;
+	};
+}
+
+ReferedBlock GDFileStore::addNewReferedBlock(string data,string root_path) {
+	auto rb = ReferedBlock::getNewReferedBlock();
+	rb.refer_count = 0;
+	WriteReferedBlock(rb, root_path, data);
+	return rb;
+}
 
 ROPE_Result GDFileStore::ReadGHObj(const GHObject_t& ghoj, ROPE rope) {
 	return ROPE_Result();

@@ -52,9 +52,9 @@ inline void LogExpectOrWarn(const string logName, T&& t, T expect) {
 
 #define LOG_INFO(logName,msg,...) do { GetLogger(logName,##__VA_ARGS__ )->info("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
-#define LOG_WARN(logName,msg) do { GetLogger(logName)->warn("{}: msg at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
+#define LOG_WARN(logName,msg,...) do { GetLogger(logName,##__VA_ARGS__ )->warn("{}: msg {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
-#define LOG_ERROR(logName,msg) do { GetLogger(logName)->error("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
+#define LOG_ERROR(logName,msg,...) do { GetLogger(logName,##__VA_ARGS__ )->error("{}: {} at {}:{}",__func__,msg,__FILE__,__LINE__);}while(0)
 
 #ifndef DebugArea
 #define DebugArea(l,...)  l,##__VA_ARGS__ 
@@ -229,7 +229,10 @@ void _TupleRead(buffer& buf, T *t)
 {
 	if constexpr (n == tuple_size_v<T>)return;
 	else {
-		Read(buf, std::get<n>(*t));
+		if constexpr (is_same_v < T, decay_t<T>>)
+			Read(buf, std::get<n>(*t));
+		else
+			Read(buf, const_cast<decay_t<decltype(std::get<n>(*t))>>(*t));
 		_TupleRead<T, n + 1>(buf, t);
 	}
 }
@@ -246,24 +249,26 @@ void Write(buffer& buf, T* t) {
 		buf.append(len * sizeof(char), t->data());
 	}
 	else if constexpr (requires(DT _t) { _t.GetES(); }) {
-		auto es = t->GetES();
+		auto es = const_cast<DT*>(t)->GetES();
 		_TupleWrite(buf, &es);
 		// more action ,may for shared_ptr<T> balabalah
 		if constexpr (requires(DT t) { DT::Write(declval<buffer&>(), &t); DT::Read(declval<buffer&>(), &t); }) {
-			T::Write(buf, t);
+			T::Write(buf, const_cast<DT*>(t));
 		}
 	}
 	else if constexpr (is_from_template<tuple, DT>) {
-		_TupleWrite(buf, t);
+		_TupleWrite(buf, const_cast<DT*>(t));
 	}
 	else if constexpr (is_from_template<vector, DT>) {
 		int sz = t->size();
 		buf.append(sizeof(sz), &sz);
+		if (sz == 0)return;
 		WriteArray(buf, &(*t)[0], sz);
 	}
 	else if constexpr (is_from_template<list, T>) {
 		int sz = t->size();
 		buf.append(sizeof(sz), &sz);
+		if (sz == 0)return;
 		for (auto& e : *t)
 			Write(buf, &e);
 	}
@@ -296,7 +301,7 @@ void Read(buffer& buf, T* t) {
 		new((string*)(t))string(size_t(len), '\0');
 		buf.drawback(len, const_cast<char*>(t->data()));
 	}
-	else if constexpr (requires(T _t) { _t.GetES(); }) {
+	else if constexpr (requires(DT _t) { _t.GetES(); }) {
 		auto es = t->GetES();
 		_TupleRead(buf, &es);
 		// more action ,may for shared_ptr<T> balabalah
@@ -304,19 +309,21 @@ void Read(buffer& buf, T* t) {
 			T::Read(buf, t);
 		}
 	}
-	else if constexpr (is_from_template<tuple, T>) {
+	else if constexpr (is_from_template<tuple, DT>) {
 		_TupleRead(buf, t);
 	}
-	else if constexpr (is_from_template<vector, T>) {
+	else if constexpr (is_from_template<vector, DT>) {
 		int sz;
 		buf.drawback(sizeof(sz), &sz);
 		new(t)T(sz);
+		if (sz == 0)return;
 		ReadArray(buf, &(*t)[0], sz);
 	}
-	else if constexpr (is_from_template<list, T>) {
+	else if constexpr (is_from_template<list, DT>) {
 		int sz;
 		buf.drawback(sizeof(sz), &sz);
 		new(t)T();
+		if (sz == 0)return;
 		while (sz--) {
 			auto r = Read<T::value_type>(buf);
 			t->push_back(r);

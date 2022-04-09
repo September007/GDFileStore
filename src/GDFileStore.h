@@ -136,6 +136,14 @@ public:
 	string GetJournalRoot()const {
 		return fmt::format("{}/Journal", this->path);
 	}
+	//journal rb root
+	string GetJournalRBRoot()const {
+		return fmt::format("{}/Journal/rb", this->path);
+	}
+	//rb root
+	string GetRBRoot()const {
+		return fmt::format("{}/rb", this->path);
+	}
 	//pgs parent path
 	string GetPageGroupsRoot()const {
 		return fmt::format("{}/PG", this->path);
@@ -162,13 +170,26 @@ public:
 	string GetReferedBlockRootPath() {
 		return fmt::format("{}/rb", this->path);
 	}
-	//read
-
+	//write
+	list<WOpeLog> wope_logs;
+	std::mutex access_to_wope_logs;
+	thread handle_wope_thread;
+	atomic_bool shut_handle_wope_thread = false;
+	void handle_wope_threadMain();
+	void _shut_handle_wope_thread() { 
+		shut_handle_wope_thread = true; 
+		if(handle_wope_thread.joinable())
+			handle_wope_thread.join();
+	}
+	void add_wope(WOpeLog wopelog);
+	void do_wope(WOpeLog wopelog);
 	//ObjectWithRB GetObjectWithRBForGHObj(const GHObject_t& ghobj);
 	//ObjectWithRB CreateObjectWithRBForGHObj(const GHObject_t& ghobj);
-
+	ReferedBlock addNewReferedBlock(string data, string root_path);
 //	string ReadGHObj(const GHObject_t& ghoj);
 	ROPE_Result ReadGHObj(const GHObject_t& ghoj, ROPE rope);
+
+	//void WriteGHObj(const GHObject_t& ghoj, WOPE wope, function<void()> journalDonecallback, function<void()> DiskDonecallback);
 
 	//handle request
 	void handleReadGHObj(const GHObject_t& ghoj,InfoForNetNode from);

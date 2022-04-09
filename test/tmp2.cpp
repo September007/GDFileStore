@@ -116,14 +116,6 @@ TEST(TimerCallerGroup, basic) {
 		EXPECT_EQ(ans1[i], i);
 }
 int conc = thread::hardware_concurrency();
-TEST(thread_pool, basic) {
-	GD::ThreadPool tp(conc);
-	atomic_int tries = 10000, cnt = 0;
-	for (int i = 0; i < tries; ++i)
-		tp.enqueue([i, &cnt]() {cnt++; });
-	tp.shutdown();
-	EXPECT_EQ(cnt, tries);
-}
 
 TEST(ConcTimerCaller, all) {
 	ConcTimerCaller ctc(conc);

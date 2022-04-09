@@ -64,7 +64,7 @@ using namespace fmt;
 //	return http_send(from, tos[0], p, "/writeRep");
 //}
 
-//@follow http param pack 1.in AsynClient::asynWrite from,tos,wope,rt,opeid  
+//@follow reqWrite pack 1.in AsynClient::asynWrite from,tos,wope,rt,opeid  
 opeIdType AsynClient::asynWrite(vector<InfoForNetNode> tos, const WOPE& wope) {
 	auto opeid = GetOpeId(wope);
 	InfoForNetNode from;
@@ -75,7 +75,7 @@ opeIdType AsynClient::asynWrite(vector<InfoForNetNode> tos, const WOPE& wope) {
 	buffer buf;
 	auto rt=reqType::Write;
 	MultiWrite(buf, from, tos, wope, rt, opeid);
-	auto send_result=http_send(from, tos[0], buf, "/asynWrite");
+	auto send_result=http_send(from, tos[0], buf, "/reqWrite");
 	return send_result ? opeid : "";
 }
 
@@ -201,11 +201,21 @@ bool AsynClient::setup_asyn_client_srv(httplib::Server* srv) {
 	if (!srv)return false;
 	try {
 		auto pthis = this;
-		srv->Post("/RepWrite", [pthis](const httplib::Request& req, httplib::Response& rep) {
+		//@dataflow request repWrite
+		srv->Post("/repWrite", [pthis](const httplib::Request& req, httplib::Response& rep) {
 			buffer buf(req.body);
-			//@follow RepWrite , unpack param as ReqWrite did
-			//pthis->thread_pool.enqueue([pthis]() {pthis->handleRepWrite()});
+			//@dataflow RepWrite , unpack param as ReqWrite did
+			auto _from = Read<InfoForNetNode>(buf);
+			auto _to = Read<InfoForNetNode>(buf);
+			auto http_data = Read<buffer>(buf);
+			auto from = Read<InfoForNetNode>(http_data);
+			auto rt = Read<repType>(http_data);
+			auto opeId = Read<opeIdType>(http_data);
+			pthis->thread_pool.enqueue([pthis=pthis,from=move(from),rt=rt,opeId=move(opeId)] {
+				pthis->handleRepWrite(from, rt, opeId);
+				});
 			});
+		return true;
 	}
 	catch (std::exception& e) {
 		LOG_ERROR("asynclient", fmt::format("got error[{}]", e.what()));

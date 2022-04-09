@@ -14,7 +14,7 @@ inline json GetConfigFromFile(const string& path) {
 		ret = json::parse(f);
 	}
 	catch (std::exception& e) {
-		LOG_WARN("IO", fmt::format("read config file [{}]catch exception[{}]", path,e.what()));
+		LOG_INFO("IO", fmt::format("read config file [{}]catch exception[{}]", path,e.what()));
 	}
 	return ret;
 }
@@ -58,12 +58,13 @@ inline json GetConfig(const string& name, const string& key, const string& defau
 		}
 	//read default_class
 	if (ret.empty()) {
-		LOG_WARN("config", fmt::format("get [{}:{}],default:[{}] failed,may try default", name, key, default_class));
+		LOG_WARN("config", fmt::format("get [{}:{}],default:[{}] failed,may try default", name, key, default_class)
+		,true);
 		if (default_class != "") {
 			ret = GetConfig(default_class, key, "", reload);
 			if (ret.empty()) {
 				LOG_WARN("config", fmt::format("get [{}:{}],default:[{}] failed,try default failed too",
-					name, key, default_class));
+					name, key, default_class), true);
 			}
 		}
 	}

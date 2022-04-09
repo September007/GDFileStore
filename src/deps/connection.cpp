@@ -4,10 +4,11 @@
 bool http_send(InfoForNetNode from, InfoForNetNode to, buffer data, const string& postname) {
 	try {
 		httplib::Client cli(to.GetConnectionstr());
+		LOG_EXPECT_TRUE("connection", cli.is_valid());
 		buffer package;
 		MultiWrite(package, from, to, data);
 		auto str = package.universal_str();
-		auto ret = cli.Post("/http_send", str.data(), str.length(), "text/plain");
+		auto ret = cli.Post(postname.c_str(), str.data(), str.length(), "text/plain");
 		return ret.error() == httplib::Error::Success;
 	}
 	catch (std::exception& e) {

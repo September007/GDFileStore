@@ -19,13 +19,12 @@ namespace GD {
         }
 
         ThreadPool(const ThreadPool&) = delete;
-        ~ThreadPool() = default;
+        ~ThreadPool() { shutdown(); };
 
         void active(size_t n) {
             shutdown();
             unique_lock lg(mutex_);
             shutdown_ = false;
-            threads_.clear();
             while (n) {
                 threads_.emplace_back(worker(*this));
                 n--;
@@ -39,6 +38,9 @@ namespace GD {
         }
 
         void shutdown() {
+            //shut down once at a circle
+            if (shutdown_)
+                return;
             // Stop all worker threads...
             {
                 std::unique_lock<std::mutex> lock(mutex_);
@@ -50,6 +52,10 @@ namespace GD {
             // Join...
             for (auto& t : threads_) {
                 t.join();
+            }
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                threads_.clear();
             }
         }
 

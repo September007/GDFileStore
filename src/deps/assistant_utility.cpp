@@ -62,7 +62,7 @@ nlohmann::json GetSetting(const string& settingFile) {
 string ReadFile(const string& path) {
 	fstream in(path);
 	if (!in.good()) {
-		GetLogger("default")->warn("readfile[{}] failed.{}:{}", path, __FILE__, __LINE__);
+		LOG_INFO("IO", fmt::format("readfile[{}] failed.", path));
 		return "";
 	}
 	string ret;

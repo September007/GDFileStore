@@ -2,7 +2,7 @@
 #ifndef CONNECTION_HEAD
 #define CONNECTION_HEAD
 #include<string>
-#include<object.h>
+//#include<object.h>
 #include<assistant_utility.h>
 #include<config.h>
 #include<httplib.h>
