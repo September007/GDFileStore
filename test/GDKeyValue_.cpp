@@ -81,6 +81,7 @@ TEST(RocksKV, interface) {
 	//set
 	for (int i = 0; i < tries; ++i)
 		kv.SetValue(keys[i], values[i]);
+	kv.db->FlushWAL(true);
 	//get
 	for (int i = 0; i < tries; ++i)
 	{

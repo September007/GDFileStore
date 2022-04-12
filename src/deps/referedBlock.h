@@ -2,6 +2,7 @@
 #include<assistant_utility.h>
 #include<chrono>
 #include<boost\container_hash\hash.hpp>
+
 //#include<GDKeyValue.h>
 using std::string;
 class ReferedBlock {
@@ -35,7 +36,8 @@ public:
 //this only interset in referedBlock.serial
 inline string GetReferedBlockStoragePath(const ReferedBlock &rb, string root_path) {
 	auto s = rb.serial;
-	ReleaseArea(s = boost::hash<decltype(rb.serial)>()(rb.serial));
+	//(s = boost::hash<decltype(rb.serial)>()(rb.serial));
+	s = std::hash<int64_t>()(rb.serial);
 	auto p1 = (s & 0xffff000000000000ll) >> 48;
 	auto p2 = (s & 0x0000ffff00000000ll) >> 32;
 	auto p3 = (s & 0x00000000ffff0000ll) >> 16;

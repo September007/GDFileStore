@@ -1,5 +1,6 @@
 ﻿#include<assistant_utility.h>
 #include<filesystem>
+#include<GDMutex.h>
 shared_ptr<spdlog::logger> GetLogger(const string& name, const bool force_isolate, const string& fileClass) {
 	//@Todo: read log file root from json
 	static auto logFileRoot = std::filesystem::absolute("./tmp/logs").string();
@@ -85,6 +86,8 @@ string ReadFile(const string& path) {
 	return ret;
 }
 bool WriteFile(const string& path, const string& content, const bool create_parent_dir_if_missing) try {
+	//auto& m = GetMutex(__func__);
+	//unique_lock lg(m);
 	auto&objDir = path;
 	ofstream out(objDir);
 	if (!out.good()) {

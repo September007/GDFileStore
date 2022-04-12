@@ -55,6 +55,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED) 
 find_package(RocksDB CONFIG REQUIRED) 
 find_package(rpclib CONFIG REQUIRED) 
+find_package(benchmark CONFIG REQUIRED)
 #find_package(concurrencpp CONFIG REQUIRED)    
 #find_package(HPX CONFIG REQUIRED)
 # head only
@@ -65,6 +66,7 @@ set (dependencis
             PUBLIC  GTest::gtest 
             PRIVATE  spdlog::spdlog_header_only RocksDB::rocksdb rpclib::rpc
 #                       concurrencpp::concurrencpp
+                        benchmark::benchmark benchmark::benchmark_main
 )
 if(test_on)
 #
@@ -77,13 +79,16 @@ if(test_on)
         if(${TestName} MATCHES "test_main")
             continue()
         endif()
-        add_executable(${TestName} ${test} "./test/test_main.cpp" ${lib_sources})
-        target_link_libraries(${TestName} ${dependencis})
+        add_executable(${TestName} ${test} "./test/test_main.cpp" )
+        target_link_libraries(${TestName} ${dependencis} GDFileStore)
     endforeach()
     # 
     list(LENGTH tests_path tests_count)
     if(tests_count GREATER 1)# with test_main
-        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp" ${lib_sources})
-        target_link_libraries(all_tests ${dependencis})
+        add_executable(all_tests ${tests_path} "./test/test_main.cpp" "test/test_main.cpp"  )
+        target_link_libraries(all_tests ${dependencis} GDFileStore)
     endif()
 endif()
+
+add_executable(syn_asyn ./test/benchmark/syn_asyn.cpp ${lib})
+target_link_libraries(syn_asyn ${dependencis} GDFileStore)

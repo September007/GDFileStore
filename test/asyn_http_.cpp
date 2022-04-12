@@ -37,6 +37,8 @@ void cliMain() {
 	auto rresult = cli.waitRope_for(ropeId, timeout);
 	EXPECT_EQ(rresult.first, ROpeState::success);
 
+	for (int i = 0; i < block_datas.size(); ++i)
+		EXPECT_EQ(block_datas[i], rresult.second.datas[i]);
 	{
 		unique_lock lg(m_);
 		cv.notify_all();

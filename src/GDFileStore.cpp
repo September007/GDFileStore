@@ -3,7 +3,7 @@
 using  file_object_data_type=GDFileStore::file_object_data_type;
 using KVStore_type=GDFileStore::KVStore_type;
 inline auto GetParentStr(string& path) {
-	DebugArea(auto abpath = filesystem::absolute(path); LOG_EXPECT_EQ("IO", abpath.string(), path));
+	//DebugArea(auto abpath = filesystem::absolute(path); LOG_EXPECT_EQ("IO", abpath.string(), path));
 	for (int i = path.size() - 1; i >= 0; --i)
 		if (path[i] != '/' && path[i] != '\\')
 			path.pop_back();
@@ -223,7 +223,12 @@ void GDFileStore::do_wope(WOpeLog wopelog) {
 					auto to_parent = GetParentStr(to_path);
 					if (!filesystem::exists(to_parent))
 						filesystem::create_directories(to_parent);
-					filesystem::copy(from_path, to_parent);
+					try {
+						filesystem::copy(from_path, to_parent, filesystem::copy_options::overwrite_existing);
+					}
+					catch (std::exception& e) {
+						cout << e.what();
+					}
 				}
 			}
 			wopelog.wope_state = WOpeLog::wope_state_Type::onDisk;
@@ -269,6 +274,12 @@ ReferedBlock GDFileStore::addNewReferedBlock(string data,string root_path) {
 	auto rb = ReferedBlock::getNewReferedBlock();
 	rb.refer_count = 0;
 	WriteReferedBlock(rb, root_path, data);
+	LOG_INFO("rb_log", fmt::format("add new rb[{} ref:{} ,path:{}]",
+		rb.serial, rb.refer_count, GetReferedBlockStoragePath(rb, root_path)));
+	//DebugArea({
+	//	auto read= ReadFile(GetReferedBlockStoragePath(rb,root_path));
+	//	LOG_EXPECT_EQ("rb_log",read, data);
+	//	})
 	return rb;
 }
 
