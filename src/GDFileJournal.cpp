@@ -8,7 +8,7 @@ bool Journal::Mount( RocksKV* kv, GDFileStore* fs) {
 	SetKV(kv);
 	SetFS(fs);
 	//@Todoo load some infomation from kv
-	log_journal_head = GetConfig(fs->GetOsdName(), "log_journal_head", "FileStore");
+	log_journal_head = GetconfigOverWrite(string{ "log_journal_head" },"", "FileStore", "log_journal_head");// GetConfig(fs->GetOsdName(), "log_journal_head", "FileStore");
 	return true;
 }
 bool Journal::UnMount(){
@@ -127,22 +127,22 @@ void Journal::do_WOPE(WOpeLog wopelog) {
 				auto newRb = fs->addNewReferedBlock(block_data, fs->GetJournalRBRoot());
 				orb.serials_list.insert(p, newRb.serial);
 				kv->SetAttr(newRb, newRb);
-				{
-					auto rb_attr = kv->GetAttr(newRb);
-					LOG_INFO("rb_log", fmt::format("create new rb[{} ref: {}]",
-						rb_attr.first.serial, rb_attr.first.refer_count));
-				}
+				//{
+				//	auto rb_attr = kv->GetAttr(newRb);
+				//	LOG_INFO("rb_log", fmt::format("create new rb[{} ref: {}]",
+				//		rb_attr.first.serial, rb_attr.first.refer_count));
+				//}
 			}break;
 			case WOPE::opetype::OverWrite:
 			{
 				auto newRb = fs->addNewReferedBlock(block_data, fs->GetJournalRBRoot());
 				*p = newRb.serial;
 				kv->SetAttr(newRb, newRb);
-				{
-					auto rb_attr = kv->GetAttr(newRb);
-					LOG_INFO("rb_log", fmt::format("create new rb[{} ref: {}]",
-						rb_attr.first.serial, rb_attr.first.refer_count));
-				}
+				//{
+				//	auto rb_attr = kv->GetAttr(newRb);
+				//	LOG_INFO("rb_log", fmt::format("create new rb[{} ref: {}]",
+				//		rb_attr.first.serial, rb_attr.first.refer_count));
+				//}
 			}break;
 		}
 	}
@@ -153,12 +153,12 @@ void Journal::do_WOPE(WOpeLog wopelog) {
 		auto rb_attr = kv->GetAttr(rrb);
 		rb_attr.first.refer_count++;
 		kv->SetAttr(rrb, rb_attr.first);
-		{
-			auto rb_attr_new = kv->GetAttr(rrb);
-			LOG_INFO("rb_log", 
-				fmt::format("journal set rb[{} ref_count={}] ref_count++,now rb.ref_count={}",
-					rrb.serial,rrb.refer_count, rb_attr_new.first.refer_count));
-		}
+		//{
+		//	auto rb_attr_new = kv->GetAttr(rrb);
+		//	LOG_INFO("rb_log", 
+		//		fmt::format("journal set rb[{} ref_count={}] ref_count++,now rb.ref_count={}",
+		//			rrb.serial,rrb.refer_count, rb_attr_new.first.refer_count));
+		//}
 	}
 	//@dataflow kv gh create gh:orb
 	kv->SetAttr(wopelog.wope.new_ghobj, orb);

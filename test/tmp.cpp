@@ -54,50 +54,50 @@ TEST(serialize, WOPE) {
 
 	r.block_datas.push_back("");
 }
-
-TEST(file, write) {
-	string root= filesystem::absolute(string{ "../../tmp/file_write" }).string();
-	string data = randomValue<string>();
-	if (!filesystem::is_directory(root))
-		filesystem::create_directories(root);
-	for (int i = 0; i < 1000; ++i) {
-		auto path = fmt::format("{}/{}.txt", root, i);
-		WriteFile(path, data);
-		auto r = ReadFile(path);
-		EXPECT_EQ(r, data);
-	};
-	std::set<int64_t> s;
-	int err_cnt = 0;
-	mutex m;
-	mutex write_;
-	auto check = [&](int64_t i) {
-		unique_lock lg(m);
-		auto p = s.insert(i);
-		if (!p.second) {
-			i++;
-		}
-
-	};
-	auto tp = [&]() {
-		for (int i = 0; i < 100; ++i) {
-			auto rb = ReferedBlock::getNewReferedBlock();
-			check(rb.serial);
-			auto path = GetReferedBlockStoragePath(rb, root);
-			{
-				unique_lock lg(write_);
-				WriteFile(path, data);
-			}
-			auto r = ReadFile(path);
-			EXPECT_EQ(data, r);
-			err_cnt += data != r;
-		}
-	};
-	vector<thread> ts;
-	for (int i = 0; i < 20; ++i)
-		ts.push_back(thread(tp));
-	for (auto& t : ts)
-		if (t.joinable())
-			t.join();
-	cout << s.size() << endl;
-	cout << err_cnt<< endl;
-}
+//
+//TEST(file, write) {
+//	string root= filesystem::absolute(string{ "../../tmp/file_write" }).string();
+//	string data = randomValue<string>();
+//	if (!filesystem::is_directory(root))
+//		filesystem::create_directories(root);
+//	for (int i = 0; i < 1000; ++i) {
+//		auto path = fmt::format("{}/{}.txt", root, i);
+//		WriteFile(path, data);
+//		auto r = ReadFile(path);
+//		EXPECT_EQ(r, data);
+//	};
+//	std::set<int64_t> s;
+//	int err_cnt = 0;
+//	mutex m;
+//	mutex write_;
+//	auto check = [&](int64_t i) {
+//		unique_lock lg(m);
+//		auto p = s.insert(i);
+//		if (!p.second) {
+//			i++;
+//		}
+//
+//	};
+//	auto tp = [&]() {
+//		for (int i = 0; i < 100; ++i) {
+//			auto rb = ReferedBlock::getNewReferedBlock();
+//			check(rb.serial);
+//			auto path = GetReferedBlockStoragePath(rb, root);
+//			{
+//				unique_lock lg(write_);
+//				WriteFile(path, data);
+//			}
+//			auto r = ReadFile(path);
+//			EXPECT_EQ(data, r);
+//			err_cnt += data != r;
+//		}
+//	};
+//	vector<thread> ts;
+//	for (int i = 0; i < 20; ++i)
+//		ts.push_back(thread(tp));
+//	for (auto& t : ts)
+//		if (t.joinable())
+//			t.join();
+//	cout << s.size() << endl;
+//	cout << err_cnt<< endl;
+//}

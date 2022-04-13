@@ -1,6 +1,21 @@
-#include<benchmark\benchmark.h>
+
 #include<ConnectionClient.h>
 #include<ConnectionServer.h>
+//#include<benchmark\benchmark.h>
+namespace benchmark {
+	class State {
+	public:
+		vector<int> its;
+		vector<int> parms;
+		int range(int i) { return parms[i]; }
+		auto begin() {
+			return its.begin();
+		}
+		auto end() {
+			return its.end();
+		}
+	};
+}
 
 //svr start before client
 mutex commence;
@@ -20,19 +35,19 @@ struct test_data {
 				vs[i] = string(block_sz, '0' + (i % 10));
 		return ret;
 	}
-	static auto & cacheInstance(int o, int b, int s) {
+	static auto& cacheInstance(int o, int b, int s) {
 		using key = pair<int, pair<int, int>>;
 		static map<key, test_data>cache;
 		auto k = key{ o,{b,s } };
 		auto p = cache.find(k);
 		if (p != cache.end())
 			return p->second;
-		else 
+		else
 			return cache[k] = Get(o, b, s);
 	}
 };
 void client_main(benchmark::State& state) {
-	
+
 	//wait for server start
 	this_thread::sleep_for(chrono::milliseconds(100));
 	shared_ptr<FSConnnectionClient> cli(new FSConnnectionClient);
@@ -90,7 +105,7 @@ static void Syn_Write_Test(benchmark::State& state) {
 	vector<InfoForOSD> osds = { srv_info };
 	//run tests
 	for (auto _ : state) {
-		for(int i=0;i<ope_cnt;++i)
+		for (int i = 0; i < ope_cnt; ++i)
 			cli.WriteAndWaitReturn(ghobjs[i], wopes[i], osds);
 	}
 	//shut down server
@@ -139,9 +154,9 @@ static void Asyn_Write_Test(benchmark::State& state) {
 		opes.push_back(WOPE(gh, new_gh, vector<WOPE::opetype>(block_cnt, WOPE::opetype::Insert),
 			block_nums, cache_data.dic_ope_block[i]));
 	}
-	for (auto  _ : state) {
-		for (int i = 0; i < ope_cnt; ++i){
-			opeIds[i]= cli.asynWrite(osds, opes[i]);
+	for (auto _ : state) {
+		for (int i = 0; i < ope_cnt; ++i) {
+			opeIds[i] = cli.asynWrite(osds, opes[i]);
 		}
 		for (int i = ope_cnt - 1; i >= 0; --i)
 			cli.waitWopeBe(opeIds[i], WOpeState::onDisk);
@@ -161,22 +176,19 @@ static void Asyn_Write_Test(benchmark::State& state) {
 #define max_block_cnt 1
 #define min_block_size 100
 #define max_block_size 100
-BENCHMARK(Syn_Write_Test)->RangeMultiplier(10)->Ranges({ 
-	{ min_ope_cnt,max_ope_cnt }, { min_block_cnt,max_block_cnt }, { min_block_size,max_block_size} });
 
-BENCHMARK(Asyn_Write_Test)->RangeMultiplier(10)->Ranges({
-	{ min_ope_cnt,max_ope_cnt }, { min_block_cnt,max_block_cnt }, { min_block_size,max_block_size} });
-
+	benchmark::State state;
 int main(int argc, char** argv) {
 	//init data
 	for (int i = min_ope_cnt; i <= max_ope_cnt; i *= 10)
 		for (int j = min_block_cnt; j <= max_block_cnt; j *= 10)
 			for (int k = min_block_size; k <= max_block_size; k *= 10)
 				test_data::cacheInstance(i, j, k);
+	state.its.resize(5);
+	state.parms = { 100,1,100 };
+	Syn_Write_Test(state);
+	Asyn_Write_Test(state);
 
-		::benchmark::Initialize(&argc, argv);                            
-		if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1; 
-			::benchmark::RunSpecifiedBenchmarks();                             
-			::benchmark::Shutdown();                                            
-			return 0;                                                           
+	return 0;
 }
+

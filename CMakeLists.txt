@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 # Enable C++20
-#set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
 # Set C++20 directories
 #add_compile_options(-isystem /usr/include/c++/9)
 # vcpkg <--
@@ -92,3 +92,6 @@ endif()
 
 add_executable(syn_asyn ./test/benchmark/syn_asyn.cpp ${lib})
 target_link_libraries(syn_asyn ${dependencis} GDFileStore)
+
+add_executable(syn_asyn_native ./test/native/syn_asyn_native.cpp ${lib})
+target_link_libraries(syn_asyn_native ${dependencis} GDFileStore)
